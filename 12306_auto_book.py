@@ -52,7 +52,7 @@ urllib3.disable_warnings() #不显示警告信息
 ssl._create_default_https_context = ssl._create_unverified_context
 req = requests.Session()
 
-
+is_check_sleep_time = cfg['check_sleep_time']
 
 encoding = cfg['encoding']
 
@@ -879,13 +879,7 @@ def order(bkInfo):
     avg_time = -1
     
     while res['status'] != True:
-        while True:
-            now = datetime.datetime.now()
-            if now.hour > 22 or now.hour < 6:
-                print('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 当前时间处于12306网站维护时段，抢票任务挂起中...')
-                time.sleep((60 - now.minute) * 60 - now.second + 5)
-            else:
-                break
+        check_sleep_time('抢票任务挂起中')
         if len(bkInfo.expired) > 0 and string_toTimestamp(bkInfo.expired) < int(time.time()):
             println('[' + threading.current_thread().getName() + ']: 抢票任务已过期，当前线程退出...')
             res['status'] = True
@@ -1285,13 +1279,7 @@ def keepalive():
         pass
 
 def task():
-    while True:
-        now = datetime.datetime.now()
-        if now.hour > 22 or now.hour < 6:
-            print('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 当前时间处于12306网站维护时段，系统将在06:00以后继续抢票...')
-            time.sleep((60 - now.minute) * 60 - now.second + 5)
-        else:
-            break
+    check_sleep_time('系统将在06:00以后继续扫描抢票任务')
     println('扫描抢票任务开始...')
     global local_ip
     local_ip = getip()
@@ -1464,6 +1452,17 @@ def time_task():
             ticket_black_list.pop(t)
             break
 #    lock.release()
+
+def check_sleep_time(msg):
+
+    while is_check_sleep_time and True:
+        now = datetime.datetime.now()
+        if now.hour > 22 or now.hour < 6:
+            print('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 当前时间处于12306网站维护时段，{}...'.format(msg))
+            time.sleep((60 - now.minute) * 60 - now.second + 5)
+        else:
+            break
+        
 '''序列化'''
 def dump(obj, path):
     with open(path,'wb') as f:
@@ -1509,13 +1508,7 @@ if __name__ == '__main__':
     req = load_obj(_path)
     if req == None:
         req = requests.Session()
-    while True:
-        now = datetime.datetime.now()
-        if now.hour > 22 or now.hour < 6:
-            print('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 当前时间处于12306网站维护时段，系统将在06:00以后继续抢票...')
-            time.sleep((60 - now.minute) * 60 - now.second + 5)
-        else:
-            break
+    check_sleep_time('系统将在06:00以后继续抢票')
     log('*' * 30 + '12306自动抢票开始' + '*' * 30)
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
