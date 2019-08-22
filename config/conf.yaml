@@ -1,0 +1,44 @@
+# -*- coding: utf-8 -*-
+
+# mail
+mail_host : 'smtp.163.com'
+mail_user : 'itsmartkit'
+mail_pass : ''
+sender : 'itsmartkit@163.com'
+
+# server
+getip_url : 'http://2019.ip138.com/ic.asp'
+server_ip : '39.95.20.xxx'
+server_port : 12306
+
+# system
+encoding : 'utf-8'
+
+log_path : 'log/logging.log'
+
+# 是否核心抢票模式
+is_core : False
+
+# 任务获取方式 True/False
+task_src : 'local' #local/net
+# 请求缓存路径
+req_cache_path : 'req.cache'
+# 订票信息文件
+booking_filename: 'config/booking.yaml'
+
+net_booking_filename: 'config/net_booking.yaml'
+
+# 小黑屋时间，单位s
+ticket_black_list_time : 180 
+# 保活任务，单位s
+keep_alive_time : 2 
+# 所抢车次发车前预留最小空余时间，单位min
+free_time : 80 
+# 相邻两次请求间隔时间，单位s
+sleep_base : 0
+# 定时任务执行周期
+timespan : 1
+# 结束任务通知音乐
+finish_task_audio : 'audio/HeartsDesire.mp3'
+# 邮件发送失败通知音乐
+post_failed_audio : 'audio/Lively.mp3'

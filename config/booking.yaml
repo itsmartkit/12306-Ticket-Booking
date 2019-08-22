@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+
+bookings:
+
+    - bno: '20190821153001' #单号
+      group : 'BJ->JN' #任务组编码
+      rank : 2 #优先级,1-5,5最高
+      realname : '张三' #登录人姓名
+      username : 'xxx'  #12306账号
+      password : 'xxx'  #密码
+      dates : '2019-09-13'  #日期,例：2019-09-13,2019-09-14
+      from_station : '北京'  #出发
+      to_station : '济南'  #到达
+      passengers_name : 'xxx'  #乘车人，例：张三,李四
+      candidate_seats : '二等座'  #备选坐席
+      choose_seats : 'F' #选座
+      email : 'xxx@163.com'  #通知邮箱 
+      set_out : '12:00'  #最早出发时间
+      arrival : '16:30'  #最晚到达时间
+      expired : '2019-09-13 16:00'  #抢票任务过期时间
+      candidate_trains : 'G15'  #备选车次 例：G15,G3
+      cddt_train_types : 'G'  #火车类别GDKT
+      is_work : True  #是否生效,True/False
