@@ -18,7 +18,8 @@ log_path : 'log/logging.log'
 
 # 是否核心抢票模式
 is_core : False
-
+# 核心模式请求间隔时间，单位s
+core_sleep_base : 4
 # 任务获取方式 True/False
 task_src : 'local' #local/net
 # 请求缓存路径
