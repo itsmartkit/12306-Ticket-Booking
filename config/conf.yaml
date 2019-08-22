@@ -16,6 +16,9 @@ encoding : 'utf-8'
 
 log_path : 'log/logging.log'
 
+# 是否检查休息时间
+check_sleep_time : True
+
 # 是否核心抢票模式
 is_core : False
 # 核心模式请求间隔时间，单位s
