@@ -27,7 +27,7 @@ Python3.6
 config/booking.yaml--抢票任务配置文件<br>
 config/conf.yaml--系统配置文件<br>
 utils/sendEmail.py--邮件发送模块<br>
-12306_auto_book.py--主程序<br>
+main.py--主程序<br>
 server.py--邮件代发服务端程序<br>
 client.py--邮件代发客户端程序(ps: 有些网络下邮件发送失败，需要代发)<br>
 
