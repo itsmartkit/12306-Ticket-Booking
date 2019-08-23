@@ -73,6 +73,7 @@ def println(msg):
     
 def log(msg):
     logger.info(msg)
+    print(msg)
 
 def getip():
     url = cfg['getip_url']
