@@ -56,6 +56,12 @@ is_check_sleep_time = cfg['check_sleep_time']
 
 encoding = cfg['encoding']
 
+seat_type = {'无座': '1', '硬座': '1', '硬卧': '3', '二等卧': 'J','软卧': '4','一等卧': 'I', '高级软卧': '6', '动卧': 'F', '二等座': 'O', '一等座': 'M', '商务座': '9'}
+
+seat_dic = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座', 33: '动卧'}
+
+
+
 def conversion_int(str):
     return int(str)
 
@@ -172,17 +178,15 @@ class Leftquery(object):
                         ticketInfo = '【' + info[3] + '车次还有余票】: ' + '出发时间:' + info[8] + ' 到达时间:' + info[9] + ' 历时:' + info[10] + ' '
 #                        print(ticketInfo, end='')
                         bl = len(ticketInfo)
-                        seat = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座',
-                                33: '动卧'}
 #                        from_station_no = info[16]
 #                        to_station_no = info[17]
-                        for j in seat.keys():
+                        for j in seat_dic.keys():
                             if info[j] != '无' and info[j] != '' and info[j] != 0:
                                 if info[j] == '有':
-                                    ticketInfo = ticketInfo + seat[j] + ':有票 '
+                                    ticketInfo = ticketInfo + seat_dic[j] + ':有票 '
 #                                    print(seat[j] + ':有票 ', end='')
                                 else:
-                                    ticketInfo = ticketInfo + seat[j] + ':有' + info[j] + '张票 '
+                                    ticketInfo = ticketInfo + seat_dic[j] + ':有' + info[j] + '张票 '
 #                                    print(seat[j] + ':有' + info[j] + '张票 ', end='')
                         if len(ticketInfo) > bl:
                             println(ticketInfo)
@@ -492,11 +496,8 @@ class Order(object):
 
     def chooseseat(self, passengers, passengers_name, stationTrainCode, cddt_seat, token):
         '''选择乘客和座位'''
-#        seat_dict = {'无座': '1', '硬座': '1', '硬卧': '3', '软卧': '4', '高级软卧': '6', '动卧': 'F', '二等座': 'O', '一等座': 'M',
-#                     '商务座': '9'}
-        seat_dict = {'无座': '1', '硬座': '1', '硬卧': '3', '二等卧': 'J','软卧': '4','一等卧': 'I', '高级软卧': '6', '动卧': 'F', '二等座': 'O', '一等座': 'M',
-                     '商务座': '9'}
-        choose_type = seat_dict[cddt_seat]
+        
+        choose_type = seat_type[cddt_seat]
         if cddt_seat == '无座' and stationTrainCode.find('D') == 0:
             choose_type = 'O'
         pass_num = len(passengers_name.split(','))  # 购买的乘客数
@@ -923,13 +924,13 @@ def order(bkInfo):
                     continue
                 # 用户选择要购买的车次的序号
                 '''判断候选车次'''
-                seat = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座',
-                    33: '动卧'}
                 cddt_seat_keys = []
+#                cddt_seat_types = {}
                 for cddt_seat in bkInfo.candidate_seats:
-                    for k in seat.keys():
-                        if seat[k] == cddt_seat:
+                    for k in seat_dic.keys():
+                        if seat_dic[k] == cddt_seat:
                             cddt_seat_keys.append(k)
+#                            cddt_seat_types.update({ k : seat_type[cddt_seat] })
                             break
                 trains_idx = []   
                 temp_trains_idx = []
@@ -941,6 +942,7 @@ def order(bkInfo):
                         for train in bkInfo.candidate_trains:
                             seat_flag = False
                             for sk in cddt_seat_keys:
+#                                if info[sk] != '无' and info[sk] != '' and (info[38] == '' or str(info[38]).find(cddt_seat_types[sk]) < 0):
                                 if info[sk] != '无' and info[sk] != '':
 #                                    log(info[3] + info[sk])
                                     seat_flag = True
@@ -1090,8 +1092,6 @@ def order(bkInfo):
 #                    passengers_name = input('请选择您要购买的乘客编号(例:1,4):')
 #                    choose_seat = input('请选择您要购买的座位类型(例:商务座):')
 #                    print(passengers_name)
-                    seat_dic = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座',
-                                33: '动卧'}
                     cddt_seats = []
                     for seat in bkInfo.candidate_seats:
                         for idx in seat_dic:
