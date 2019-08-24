@@ -5,3 +5,4 @@ pygame==1.9.4
 requests==2.20.0
 schedule==0.5.0
 wrapcache==1.0.8
+mutagen==1.42.0

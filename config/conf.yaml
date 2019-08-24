@@ -14,16 +14,18 @@ server_port : 12306
 # system
 encoding : 'utf-8'
 
+sys_name : 'PABS'
+
 log_path : 'log/logging.log'
 
-# 是否检查休息时间
+# 是否检查休息时间 默认：True
 check_sleep_time : True
 
-# 是否核心抢票模式
+# 是否核心抢票模式 默认：False
 is_core : False
 # 核心模式请求间隔时间，单位s
 core_sleep_base : 4
-# 任务获取方式 True/False
+# 任务获取方式
 task_src : 'local' #local/net
 # 请求缓存路径
 req_cache_path : 'req.cache'
@@ -42,6 +44,8 @@ free_time : 80
 sleep_base : 0
 # 定时任务执行周期
 timespan : 1
+# 是否循环播放音乐 True/False, 默认：False
+loop_play : False
 # 结束任务通知音乐
 finish_task_audio : 'audio/HeartsDesire.mp3'
 # 邮件发送失败通知音乐

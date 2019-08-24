@@ -10,6 +10,7 @@ import datetime
 import json
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+from mutagen.mp3 import MP3
 import os
 import pygame
 import re
@@ -36,7 +37,7 @@ import yaml
 cwd_path = os.path.abspath(os.getcwd())
 cfg = yaml.load(open(cwd_path + '/config/conf.yaml','r', encoding='utf-8'))
 
-logger = logging.getLogger('PABS')
+logger = logging.getLogger(cfg['sys_name'])
 logger.setLevel(logging.DEBUG)
 # 建立一个filehandler来把日志记录在文件里，级别为debug以上
 fh = logging.FileHandler(cfg['log_path'])
@@ -1060,7 +1061,7 @@ def order(bkInfo):
                             success_info = success_info + '<div><p>---------------------<br/>From: 12306 PABS<br/>' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '</p><div>'
                             email = SendEmail()
                             send_res = email.send(bkInfo.email, subject, success_info)
-                            playaudio(cfg['finish_task_audio'])
+                            playaudio(cfg['finish_task_audio'], cfg['loop_play'])
                             if send_res == False:
                                 println('正在尝试使用邮件代理发送...')
                                 cmdTxt = 'addmailtask:' + bkInfo.email + '|' + subject + '|' + success_info
@@ -1120,27 +1121,9 @@ def order(bkInfo):
                                 println(res['msg'])
                                 res.update({'msg' : res['msg']})
                             if res['msg'].find('余票不足') > -1 or res['msg'].find('没有足够的票') > -1:
-                                println('下单异常，抢票当前任务退出...')
-                                # 发送邮件
-                                subject = '自助订票系统--任务取消通知'
-                                success_info = '<div style="color: #000000; padding-top: 5px; padding-bottom: 5px;">主机[' + local_ip + ']通知：' + res['msg'] + '</div><div style="color: #000000; padding-top: 5px; padding-bottom: 5px; font-weight: bold;"><div>订票信息如下：</div>'
-                                success_info = success_info + '，' + date + '，' + from_station + '-->' + to_station + '，' + t_no + '次列车。</div>'
-                                success_info = success_info + '<div><p>---------------------<br/>From: 12306 PABS<br/>' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '</p><div>'
-                                email = SendEmail()
-                                send_res = email.send(bkInfo.email, subject, success_info)
-                                playaudio(cfg['finish_task_audio'])
-                                if send_res == False:
-                                    playaudio(cfg['post_failed_audio'])
-                                    println('正在尝试使用邮件代理发送...')
-                                    cmdTxt = 'addmailtask:' + bkInfo.email + '|' + subject + '|' + success_info
-                                    try:
-                                        client.sendall(cmdTxt.encode(encoding))
-                                        resp = bytes.decode(client.recv(1024), encoding)
-                                    except:
-                                        pass
-                                    
-                                res['status'] = True
-                                break
+                                println('[' + seat + ']下单异常：余票不足！')
+                                res['status'] = False
+                                continue
                         if res['status']:
                             booking_list[info_key] = res['status']
                             println('恭喜您，抢票成功！')
@@ -1150,9 +1133,9 @@ def order(bkInfo):
                             success_info = success_info + '<div><p>---------------------<br/>From: 12306 PABS<br/>' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '</p><div>'
                             email = SendEmail()
                             send_res = email.send(bkInfo.email, subject, success_info)
-                            playaudio(cfg['finish_task_audio'])
+                            playaudio(cfg['finish_task_audio'], cfg['loop_play'])
                             if send_res == False:
-                                playaudio(cfg['post_failed_audio'])
+                                playaudio(cfg['post_failed_audio'], cfg['loop_play'])
                                 println('正在尝试使用邮件代理发送...')
                                 cmdTxt = 'addmailtask:' + bkInfo.email + '|' + subject + '|' + success_info
                                 try:
@@ -1243,13 +1226,18 @@ class BookingInfo(object):
         # 火车类型['G','D','K']
         self.cddt_train_types = booking['cddt_train_types'].split(',')
 
-def playaudio(path):
+def playaudio(path, loop_play = False):
     try:
         pygame.mixer.init()
         println('开始播放音乐：' + path)
         pygame.mixer.music.load(path)
-        pygame.mixer.music.play()
-        time.sleep(12)
+        audio = MP3(path)
+        while True:
+            pygame.mixer.music.play()
+            time.sleep(audio.info.length)
+            if loop_play == False:
+                break
+#        time.sleep(12)
         pygame.mixer.music.stop()
     except Exception as e:
         log(e)
