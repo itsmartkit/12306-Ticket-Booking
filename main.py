@@ -1081,7 +1081,7 @@ def order(bkInfo):
                     for name in bkInfo.passengers_name:
                         p_idx = 1
                         for p in passengers:
-                            log(p)
+#                            log(p)
                             if name == p['passenger_name']:
                                 passengers_name = passengers_name + str(p_idx) + ','
                                 p_name = p_name + p['passenger_name']+'(' + p['passenger_id_no'] + ')' + ', '
