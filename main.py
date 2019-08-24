@@ -176,7 +176,7 @@ class Leftquery(object):
                                     break
                         if not show_flag:
                             continue
-                        ticketInfo = '【' + info[3] + '车次还有余票】: ' + '出发时间:' + info[8] + ' 到达时间:' + info[9] + ' 历时:' + info[10] + ' '
+                        ticketInfo = '【' + info[3] + '车次还有余票】: [' + date + '] 出发时间:' + info[8] + ' 到达时间:' + info[9] + ' 历时:' + info[10] + ' '
 #                        print(ticketInfo, end='')
                         bl = len(ticketInfo)
 #                        from_station_no = info[16]
@@ -1172,7 +1172,7 @@ def order(bkInfo):
                     booking_now[bkInfo.group] = 0
                     lock.release()
             except Exception as e:
-                raise
+                 
                 log('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 本次下单异常...')
                 log(e)
                 println('小黑屋新增成员：['+ train_tip + ']')
