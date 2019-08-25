@@ -979,11 +979,11 @@ def order(bkInfo):
                                                 now = datetime.datetime.now()
                                                 departure = date == now.strftime('%Y-%m-%d')
                                                 if departure:
-                                                    print('当前为出发当天')
+#                                                    print('当前为出发当天')
                                                     # 当前时间 + free_time
                                                     t5 = now.hour * 60 + now.minute + free_time
-                                                    print('t1: '+ str(t1))
-                                                    print('t5: '+ str(t5))
+#                                                    print('t1: '+ str(t1))
+#                                                    print('t5: '+ str(t5))
                                                     if t5 < t1:
                                                         temp_trains_idx.append(num)
                                                 else:
@@ -1493,7 +1493,7 @@ _path = cfg['req_cache_path']
 
 
 if __name__ == '__main__':
-    
+
     req = load_obj(_path)
     if req == None:
         req = requests.Session()
