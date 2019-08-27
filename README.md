@@ -35,7 +35,6 @@ client.py--邮件代发客户端程序(ps: 有些网络下邮件发送失败，�
 程序参考了部分开源项目，对以下同仁表示感谢~<br>
 下单程序参考 https://github.com/Henryhaohao/12306_Ticket.git 感谢 [Henryhaohao](https://github.com/Henryhaohao/12306_Ticket.git)<br> 
 全国CDN获取参考 https://github.com/testerSunshine/12306.git 感谢 [文贤平](https://github.com/testerSunshine/12306.git)<br>
-另外，感谢 littlebigluo 提供的验证码识别接口：http://littlebigluo.qicp.net:47720/<br>
 
 ### 总结
 订票信息配置正确便可运行，适合有一定编程基础的读者<br>
