@@ -903,6 +903,7 @@ def order(bkInfo):
             break
         n += 1
         if is_core:
+            global sleep_base
             sleep_base = cfg['core_sleep_base']
         st = round(random.uniform(1.2 * len(booking_list), (7 - int(bkInfo.rank)) / 2) + random.uniform(sleep_base, len(booking_list) / 2.0 + sleep_base), 2)
 #        st = 0
