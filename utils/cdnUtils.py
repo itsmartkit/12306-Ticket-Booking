@@ -13,6 +13,11 @@ import sys
 import time
 import threading
 import requests
+import ssl
+import json
+
+ssl._create_default_https_context = ssl._create_unverified_context
+req = requests.Session()
 
 try:
     reload(sys)
@@ -32,10 +37,9 @@ class CDNProxy:
         """设置header"""
         return {
             'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-            'X-Requested-With': 'xmlHttpRequest',
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',
-            'Referer': 'https://kyfw.12306.cn/otn/login/init',
             'Accept': '*/*',
+            'X-Requested-With': 'XMLHttpRequest',
         }
     def println(self, msg):
         print(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + ': ' +msg)
@@ -64,8 +68,28 @@ class CDNProxy:
         更新cdn列表
         """
         self.println('开始更新cdn列表...')
-        city_id = self.get_city_id()
         cdn_list = []
+        
+        # ping.chinaz.com
+        self.ping_chinaz(cdn_list)
+        
+        # ping.aizhan.com
+        self.ping_aizhan(cdn_list)
+        
+        # tools.ipip.net
+        self.ping_ipip(cdn_list)
+        
+        # www.wepcc.com
+        self.ping_wepcc(cdn_list)
+        
+        # update cdn file
+        cdn_list = list(set(cdn_list))
+        self.update_cdn_file(cdn_list)
+        
+
+    def ping_chinaz(self, cdn_list):
+        self.println('[ping.chinaz.com] 分析cdn开始...')
+        city_id = self.get_city_id()
         for guid in city_id:      
             url = 'http://ping.chinaz.com/iframe.ashx?t=ping&callback=jQuery111304824429956769827_{}'.format(int(round(time.time() * 1000)))
             data = {'guid': guid,
@@ -74,7 +98,8 @@ class CDNProxy:
                     'ishost': 0,
                     'checktype': 0
                 }
-            try:       
+            try:
+                
                 rep = self.httpClint.post(url, data, headers=self._set_header(), timeout = self.timeout)
                 text = bytes.decode(rep.content)
                 res = re.findall(re.compile(r'[(](.*?)[)]', re.S), text)
@@ -90,6 +115,94 @@ class CDNProxy:
             except:
 #                print(e)
                 pass
+        self.println('[ping.chinaz.com] 分析cdn完毕！')
+        return cdn_list
+
+    def ping_aizhan(self, cdn_list):
+        self.println('[ping.aizhan.com] 分析cdn开始...')
+        url_index = 'https://ping.aizhan.com/'
+        url = 'https://ping.aizhan.com/api/ping?callback=flightHandler'
+        headers = {
+                'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3833.0 Safari/537.36',
+                'Accept': '*/*',
+                'Host': 'ping.aizhan.com',
+                'Referer': 'https://ping.aizhan.com/',
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        try:
+            html =bytes.decode(req.get(url_index).content)
+            _csrf = re.findall('_csrf:\'(.*?)\'', html)
+            data = {'type': 'ping',
+                'domain': 'kyfw.12306.cn',
+                '_csrf': _csrf[0]
+           }
+            rep = req.post(url, data, headers=headers, timeout = 10)
+            text = bytes.decode(rep.content)
+            text = text.replace('flightHandler(','')[:-1]
+            json_callback = json.loads(text);
+            for r in json_callback:
+                cdn_list.append(json_callback[r]['ip'])
+            self.println('[ping.aizhan.com] 分析cdn完毕！')
+        except:
+            pass
+     
+    def ping_ipip(self, cdn_list):
+        self.println('[tools.ipip.net] 分析cdn开始...')
+        url = 'https://tools.ipip.net/ping.php?v=4&a=send&host=kyfw.12306.cn&area%5B%5D=china'
+        headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3833.0 Safari/537.36',
+                'Accept': '*/*',
+                'Host': 'tools.ipip.net',
+                'Referer': 'https://tools.ipip.net/ping.php'
+            }
+        try:
+            rep = req.get(url, headers=headers, timeout = 60)
+            text = bytes.decode(rep.content)
+            ip_re = re.compile(r'\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b')
+            hosts = re.findall(ip_re,text);
+            hosts = list(set(hosts));
+            for ip in hosts:  
+                cdn_list.append(ip)
+            self.println('[tools.ipip.net] 分析cdn完毕！')
+        except:
+            pass
+        
+    def ping_wepcc(self, cdn_list):
+        self.println('[www.wepcc.com] 分析cdn开始...')
+        url_index = 'https://www.wepcc.com/'
+        ping_url = 'https://www.wepcc.com/check-ping.html'
+        headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3833.0 Safari/537.36',
+                'Accept': '*/*',
+                'Host': 'www.wepcc.com',
+                'Referer': 'https://www.wepcc.com/'
+            }
+        try:
+            node = '1,2,3,4'
+            data = {
+                    'node': node,
+                    'host': 'kyfw.12306.cn',
+                }
+            rep = req.post(url_index, data, headers=headers, timeout = 10)
+            text = bytes.decode(rep.content)
+            data_ids = re.findall(r'<tr class="item" data-id="(\d{1,})">',text)
+            for i in data_ids:
+                try:
+                    data = {
+                        'node': i,
+                        'host': 'kyfw.12306.cn',
+                    }
+                    rep = req.post(ping_url, data, headers=headers, timeout = 3).json()
+    #                    text = bytes.decode(rep.content)
+                    cdn_list.append(rep['data']['ip'])
+                except:
+                    pass
+            self.println('[www.wepcc.com] 分析cdn完毕！')
+        except:
+            pass
+
+    def update_cdn_file(self, cdn_list):
         if cdn_list:
             cdn_file = self.open_cdn_file()
             path = os.path.join(os.path.dirname(__file__), '../cdn_list')
@@ -105,8 +218,6 @@ class CDNProxy:
                 self.println('更新cdn列表完毕，新增[{}]个。'.format(n))
             except:
                 pass
-        return cdn_list
-
     def open_cdn_file(self):
         cdn = []
         # cdn_re = re.compile("CONNECT (\S+) HTTP/1.1")

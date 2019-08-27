@@ -132,8 +132,11 @@ class Leftquery(object):
         tostation = self.station_name(to_station)
         self.n = n
         host = 'kyfw.12306.cn'
-        if cdn_list:
-            host = cdn_list[random.randint(0, len(cdn_list) - 1)]
+        if is_core:
+            host = real_host
+        else:
+            if cdn_list:
+                host = cdn_list[random.randint(0, len(cdn_list) - 1)]
         log('[' + threading.current_thread().getName() + ']: 余票查询开始，请求主机 --> [' + host + ']')
         url = 'https://'+ host +'/otn/leftTicket/query?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
             date, fromstation, tostation)
@@ -804,7 +807,7 @@ def pass_captcha():
     }
     try:
         return pass_captcha_360(base64_str)
-    except Exception as e:
+    except:
 #        log(e)
         try:
             res = requests.post(url_captcha, files=files, headers=headers, verify=False).text
@@ -899,6 +902,8 @@ def order(bkInfo):
             res['status'] = True
             break
         n += 1
+        if is_core:
+            sleep_base = cfg['core_sleep_base']
         st = round(random.uniform(1.2 * len(booking_list), (7 - int(bkInfo.rank)) / 2) + random.uniform(sleep_base, len(booking_list) / 2.0 + sleep_base), 2)
 #        st = 0
 #        if len(cdn_list) < 3:
@@ -1140,7 +1145,7 @@ def order(bkInfo):
                                 cmdTxt = 'addmailtask:' + bkInfo.email + '|' + subject + '|' + success_info
                                 try:
                                     client.sendall(cmdTxt.encode(encoding))
-                                    resp = bytes.decode(client.recv(1024), encoding)
+                                    bytes.decode(client.recv(1024), encoding)
                                 except:
                                     pass 
 
@@ -1490,38 +1495,41 @@ task_src = cfg['task_src']
 server_ip = cfg['server_ip']
 server_port = cfg['server_port']
 _path = cfg['req_cache_path']
-
+is_core = cfg['is_core']
+real_host = cfg['real_host']
 
 if __name__ == '__main__':
-
-    req = load_obj(_path)
-    if req == None:
-        req = requests.Session()
-    check_sleep_time('系统将在06:00以后继续抢票')
-    log('*' * 30 + '12306自动抢票开始' + '*' * 30)
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-    client.connect((server_ip, 12306))
-#    t = threading.Thread(target=keepalive, args=())
-#    t.start()
-#    client.connect(('127.0.0.1', 12306))
-#    schedule.every(keep_alive_time).seconds.do(keepalive)
-    booking_list = {}
-    cddt_trains = {}
-    thread_list = {}
-    try_count = {}
-    booking_now = {}
-    local_ip = getip()
-#    time.sleep(300)
-    cdn_certification()
-
-    task()
-    schedule.every(10).minutes.do(task)
-    schedule.every(120).minutes.do(cdn_upd)
-    schedule.every(timespan).seconds.do(time_task)
-    while True: 
-        schedule.run_pending()
-        time.sleep(1)
-    client.close()
+    try:
+        req = load_obj(_path)
+        if req == None:
+            req = requests.Session()
+        check_sleep_time('系统将在06:00以后继续抢票')
+        log('*' * 30 + '12306自动抢票开始' + '*' * 30)
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        client.connect((server_ip, 12306))
+    #    t = threading.Thread(target=keepalive, args=())
+    #    t.start()
+    #    client.connect(('127.0.0.1', 12306))
+    #    schedule.every(keep_alive_time).seconds.do(keepalive)
+        booking_list = {}
+        cddt_trains = {}
+        thread_list = {}
+        try_count = {}
+        booking_now = {}
+        local_ip = getip()
+    #    time.sleep(300)
+        cdn_certification()
     
+        task()
+        schedule.every(10).minutes.do(task)
+        if is_core is False:
+            schedule.every(120).minutes.do(cdn_upd)
+        schedule.every(timespan).seconds.do(time_task)
+        while True: 
+            schedule.run_pending()
+            time.sleep(1)
+        client.close()
+    except Exception as ex:
+        log(ex)
     

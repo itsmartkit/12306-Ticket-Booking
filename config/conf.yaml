@@ -11,6 +11,9 @@ getip_url : 'http://2019.ip138.com/ic.asp'
 server_ip : '39.95.20.xxx'
 server_port : 12306
 
+# 真实主机 ip
+real_host : '61.147.226.185'
+
 # system
 encoding : 'utf-8'
 
@@ -21,10 +24,10 @@ log_path : 'log/logging.log'
 # 是否检查休息时间 默认：True
 check_sleep_time : True
 
-# 是否核心抢票模式 默认：False
-is_core : False
+# 是否核心抢票模式 默认：False, 且建议 False
+is_core : True
 # 核心模式请求间隔时间，单位s
-core_sleep_base : 4
+core_sleep_base : 3
 # 任务获取方式
 task_src : 'local' #local/net
 # 请求缓存路径
