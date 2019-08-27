@@ -25,7 +25,7 @@ log_path : 'log/logging.log'
 check_sleep_time : True
 
 # 是否核心抢票模式 默认：False, 且建议 False
-is_core : True
+is_core : False
 # 核心模式请求间隔时间，单位s
 core_sleep_base : 3
 # 任务获取方式
