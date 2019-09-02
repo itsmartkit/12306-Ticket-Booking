@@ -263,7 +263,7 @@ class Login(object):
 #        # print('algID:' + algID)
 #        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID={}&hashCode=oMKaC1-IyRlvl3f7psQ7Lpmk5hWfIhPlSY14Isk7hdw&FMQw=1&q4f3=zh-CN&VySQ=FGE-rq-E0vUKQy2WxzINw7p62lFWMAjd&VPIf=1&custID=133&VEek=unknown&dzuS=29.0%20r0&yD16=0&EOQP=f57fa883099df9e46e7ee35d22644d2b&jp76=7047dfdd1d9629c1fb64ef50f95be7ab&hAqN=Win32&platform=WEB&ks0Q=6f0fab7b40ee4a476b4b3ade06fe9065&TeRS=1080x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(Windows%20NT%206.1;%20WOW64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/63.0.3239.132%20Safari/537.36&E3gR=fd7a8adb89dd5bf3a55038ad1adc5d35&timestamp='.format(algID)
 #        
-        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=kNxKEJAs7D&hashCode=T1zAW5b6dbM67N8fymVQKDSqWaMg3vcE0XifaW04QK0&FMQw=1&q4f3=zh-CN&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=382b3eb7cfc5d30f1b59cb283d1acaf3&lEnu=3232235885&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=Linux%20x86_64&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=1003x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(X11;%20Linux%20x86_64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/75.0.3770.142%20Safari/537.36&E3gR=7484b4d443309cac29a8c080495fc1c0&timestamp='
+        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=YD9Iw7QM4u&hashCode=d7vhohETY2f2TpCef2MPZFvngSXyZU71bSRYvkHTkbc&FMQw=0&q4f3=zh-CN&VySQ=FGFC5l5w_W3LWESYu2oI4qV2jIzzka61&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=c227b88b01f5c513710d4b9f16a5ce52&lEnu=3232235624&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=MacIntel&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=831x1440&tOHY=24xx900x1440&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(Macintosh;%20Intel%20Mac%20OS%20X%2010_13_4)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/76.0.3809.132%20Safari/537.36&E3gR=ab86d46d16b9293beca4799ff15c5db1&timestamp='
 #        log(url_rail_deviceid)
         html_rail_deviceid = req.get(url_rail_deviceid + str(int(time.time()*1000)),headers=self.headers).text
         callback = html_rail_deviceid.replace("callbackFunction('", '').replace("')", '')
@@ -378,8 +378,12 @@ class Order(object):
             # '_json_att':''
         }
         global req
-        html_uam = req.post(self.url_uam, data=form, headers=self.head_1, verify=False).json()
-        
+        resp_uam = req.post(self.url_uam, data=form, headers=self.head_1, verify=False)
+        if resp_uam.status_code != 200:
+            println('验证uam失败: response ' + str(resp_uam.status_code))
+            auth_res.update({'status': False})
+            return auth_res
+        html_uam = resp_uam.json()
         if html_uam['result_code'] == 0:
             println('恭喜您,uam验证成功!')
             auth_res.update({'status': True})
