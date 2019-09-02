@@ -137,7 +137,7 @@ class Leftquery(object):
         else:
             if cdn_list:
                 host = cdn_list[random.randint(0, len(cdn_list) - 1)]
-        log('[' + threading.current_thread().getName() + ']: 余票查询开始，请求主机 --> [' + host + ']')
+        log('[{0}]: [{1}]-->[{2}]余票查询开始，请求主机 --> [{3}]'.format(threading.current_thread().getName(), from_station, to_station, host))
         url = 'https://'+ host +'/otn/leftTicket/query?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
             date, fromstation, tostation)
 #        print(url)
