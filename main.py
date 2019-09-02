@@ -137,8 +137,8 @@ class Leftquery(object):
         else:
             if cdn_list:
                 host = cdn_list[random.randint(0, len(cdn_list) - 1)]
-        log('[{0}]: [{1}]-->[{2}]余票查询开始，请求主机 --> [{3}]'.format(threading.current_thread().getName(), from_station, to_station, host))
-        url = 'https://'+ host +'/otn/leftTicket/query?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
+        log('[{}]: 余票查询开始，请求主机 --> [{}]'.format(threading.current_thread().getName(), host))
+        url = 'https://'+ host +'/otn/leftTicket/queryT?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
             date, fromstation, tostation)
 #        print(url)
         try:
@@ -228,7 +228,7 @@ class Leftquery(object):
                 if str(e).find('Max retries exceeded') > -1:
                     flag = True
                     println('查询余票信息异常: Max retries exceeded!')
-                if flag:
+                if flag == False:
                     println('查询余票信息异常: ' + str(e))
 #            print(e)
 #            exit()
