@@ -115,7 +115,7 @@ class Leftquery(object):
             try:
                html = requests.get(self.station_url, verify=False).text 
             except:
-               html = requests.get('http://' + server_ip + '/station_name.js', verify=False).text 
+               html = requests.get('http://' + server_ip + '/js/station_name.js', verify=False).text 
 #            print(html)
             self.station_name_res = html.split('@')[1:]
 #            time.sleep(60)
