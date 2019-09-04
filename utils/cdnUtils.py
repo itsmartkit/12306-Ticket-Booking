@@ -86,6 +86,9 @@ class CDNProxy:
         cdn_list = list(set(cdn_list))
         self.update_cdn_file(cdn_list)
         
+        #write cdn file
+        cdn.write_cdn_file(cdn.open_cdn_file())
+        
 
     def ping_chinaz(self, cdn_list):
         self.println('[ping.chinaz.com] 分析cdn开始...')
@@ -237,8 +240,7 @@ class CDNProxy:
                 if i and 'kyfw.12306.cn:443' not in i:
                     cdn.append(i.replace('\n', ''))
             return cdn
-    def write_cdn_file(self):
-        cdn_list = self.open_cdn_file()
+    def write_cdn_file(self, cdn_list):
         cdn_list_path = os.path.join(os.path.dirname(__file__), '../cdn_list')
         url_cdn_path = os.path.join(os.path.dirname(__file__), '../url_cdn_list')
         if os.path.exists(url_cdn_path):
@@ -248,6 +250,7 @@ class CDNProxy:
                     if i and 'kyfw.12306.cn:443' not in i:
                         cdn_list.append(i.replace('\n', '')[7:-4])
         cdn_list = list(set(cdn_list))
+        cdn_list.sort(reverse=True)
 #        temp_cdn_path = os.path.join(os.path.dirname(__file__), '../temp_cdn_list')
         f = open(cdn_list_path, 'w')
         for ip in cdn_list:
@@ -259,8 +262,6 @@ class CDNProxy:
         
 if __name__ == '__main__':
     cdn = CDNProxy()
-#    t = threading.Thread(target=cdn.update_cdn_list(), args=())
-#    t.setDaemon(True)
-#    # t2 = threading.Thread(target=self.set_cdn, args=())
-#    t.start()
-#    cdn.write_cdn_file()
+    t = threading.Thread(target=cdn.update_cdn_list(), args=())
+    t.setDaemon(True)
+    t.start()

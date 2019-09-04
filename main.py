@@ -1415,6 +1415,9 @@ def cdn_req(cdn):
             time_out_cdn[to_cdn] = 0
 #    println(time_out_cdn)
     println(u"所有cdn解析完成, 目前可用[" + str(len(cdn_list)) + "]个")
+    # 回写可用
+    CDN = CDNProxy()
+    CDN.write_cdn_file(cdn_list)
 
 def cdn_certification():
     """
@@ -1529,7 +1532,8 @@ if __name__ == '__main__':
         task()
         schedule.every(10).minutes.do(task)
         if is_core is False:
-            schedule.every(120).minutes.do(cdn_upd)
+            schedule.every(30).minutes.do(cdn_upd)
+        schedule.every(60).minutes.do(cdn_certification)
         schedule.every(timespan).seconds.do(time_task)
         while True: 
             schedule.run_pending()
