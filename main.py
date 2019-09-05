@@ -1415,9 +1415,9 @@ def cdn_req(cdn):
             time_out_cdn[to_cdn] = 0
 #    println(time_out_cdn)
     println(u"所有cdn解析完成, 目前可用[" + str(len(cdn_list)) + "]个")
-    # 回写可用
-    CDN = CDNProxy()
-    CDN.write_cdn_file(cdn_list)
+#    # 回写可用
+#    CDN = CDNProxy()
+#    CDN.write_cdn_file(cdn_list)
 
 def cdn_certification():
     """
