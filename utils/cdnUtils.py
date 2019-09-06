@@ -87,7 +87,7 @@ class CDNProxy:
         self.update_cdn_file(cdn_list)
         
         #write cdn file
-        self.write_cdn_file(cdn.open_cdn_file())
+        self.write_cdn_file(self.open_cdn_file())
         
 
     def ping_chinaz(self, cdn_list):
