@@ -1165,11 +1165,11 @@ def order(bkInfo):
                     booking_now[bkInfo.group] = 0
                     lock.release()
             except Exception as e:
-                 
                 log('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 本次下单异常...')
                 log(e)
-                println('小黑屋新增成员：['+ train_tip + ']')
-                ticket_black_list.update({train_tip : ticket_black_list_time })
+                if train_tip:  
+                    println('小黑屋新增成员：['+ train_tip + ']')
+                    ticket_black_list.update({train_tip : ticket_black_list_time })
                 
 #                if str(e).find('Expecting value') > -1:
                     
