@@ -7,9 +7,12 @@ mail_pass : ''
 sender : 'itsmartkit@163.com'
 
 # server
-getip_url : 'http://2019.ip138.com/ic.asp'
+getip_url : 'http://www.itsmartkit.com/ip.php'
 server_ip : '39.95.20.xxx'
 server_port : 12306
+
+# 自动识别验证码
+auto_auth : True
 
 # 真实主机 ip
 real_host : '61.147.226.185'
@@ -31,7 +34,9 @@ core_sleep_base : 3
 # 任务获取方式
 task_src : 'local' #local/net
 # 请求缓存路径
-req_cache_path : 'req.cache'
+req_cache_path : 'cache/req.cache'
+# algID缓存路径
+algID_cache_path : 'cache/algID.cache'
 # 订票信息文件
 booking_filename: 'config/booking.yaml'
 
@@ -44,7 +49,7 @@ keep_alive_time : 2
 # 所抢车次发车前预留最小空余时间，单位min
 free_time : 80 
 # 相邻两次请求间隔时间，单位s
-sleep_base : 0
+sleep_base : 1
 # 定时任务执行周期
 timespan : 1
 # 是否循环播放音乐 True/False, 默认：False

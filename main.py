@@ -33,6 +33,7 @@ from utils.sendEmail import SendEmail
 import logging
 import pickle
 import yaml
+import time
 
 cwd_path = os.path.abspath(os.getcwd())
 cfg = yaml.load(open(cwd_path + '/config/conf.yaml','r', encoding='utf-8'), Loader=yaml.FullLoader)
@@ -138,7 +139,7 @@ class Leftquery(object):
             if cdn_list:
                 host = cdn_list[random.randint(0, len(cdn_list) - 1)]
         log('[{}]: 余票查询开始，请求主机 --> [{}]'.format(threading.current_thread().getName(), host))
-        url = 'https://'+ host +'/otn/leftTicket/queryT?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
+        url = 'https://'+ host +'/otn/leftTicket/queryA?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
             date, fromstation, tostation)
 #        print(url)
         try:
@@ -257,14 +258,21 @@ class Login(object):
         
     def get_rail_deviceid(self):
         '''获取rail_deviceid'''
-        global req
-#        html = requests.get('https://kyfw.12306.cn/otn/HttpZF/GetJS', headers=self.headers).text
-#        algID = re.search(r'algID\\x3d(.*?)\\x', html).group(1)
-#        # print('algID:' + algID)
-#        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID={}&hashCode=oMKaC1-IyRlvl3f7psQ7Lpmk5hWfIhPlSY14Isk7hdw&FMQw=1&q4f3=zh-CN&VySQ=FGE-rq-E0vUKQy2WxzINw7p62lFWMAjd&VPIf=1&custID=133&VEek=unknown&dzuS=29.0%20r0&yD16=0&EOQP=f57fa883099df9e46e7ee35d22644d2b&jp76=7047dfdd1d9629c1fb64ef50f95be7ab&hAqN=Win32&platform=WEB&ks0Q=6f0fab7b40ee4a476b4b3ade06fe9065&TeRS=1080x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(Windows%20NT%206.1;%20WOW64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/63.0.3239.132%20Safari/537.36&E3gR=fd7a8adb89dd5bf3a55038ad1adc5d35&timestamp='.format(algID)
-#        
-        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=YD9Iw7QM4u&hashCode=d7vhohETY2f2TpCef2MPZFvngSXyZU71bSRYvkHTkbc&FMQw=0&q4f3=zh-CN&VySQ=FGFC5l5w_W3LWESYu2oI4qV2jIzzka61&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=c227b88b01f5c513710d4b9f16a5ce52&lEnu=3232235624&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=MacIntel&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=831x1440&tOHY=24xx900x1440&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(Macintosh;%20Intel%20Mac%20OS%20X%2010_13_4)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/76.0.3809.132%20Safari/537.36&E3gR=ab86d46d16b9293beca4799ff15c5db1&timestamp='
-#        log(url_rail_deviceid)
+#        global req
+#        # 减少请求次数，读取磁盘缓存
+#        algID_path = cfg['algID_cache_path']
+#        algID = None
+#        if os.path.exists(algID_path):
+#            f_stat = os.stat(algID_path)
+#            ns = time.mktime(datetime.datetime.now().timetuple())
+#            ms = f_stat.st_mtime
+#            if (ns - ms) < 86400:
+#                algID = load_obj(algID_path)
+#        if algID == None:
+#            html = requests.get('https://kyfw.12306.cn/otn/HttpZF/GetJS', headers=self.headers).text
+#            algID = re.search(r'algID\\x3d(.*?)\\x', html).group(1)
+#            dump(algID, algID_path)
+        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=J3bG06RZnc&hashCode=-wxti33vNkVmnROAg6lZ6vxZ5KwK8sziRm7wW_JxUiI&FMQw=1&q4f3=zh-CN&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=382b3eb7cfc5d30f1b59cb283d1acaf3&lEnu=3232235885&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=Linux%20x86_64&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=1003x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(X11;%20Linux%20x86_64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/75.0.3770.142%20Safari/537.36&E3gR=7484b4d443309cac29a8c080495fc1c0&timestamp='
         html_rail_deviceid = req.get(url_rail_deviceid + str(int(time.time()*1000)),headers=self.headers).text
         callback = html_rail_deviceid.replace("callbackFunction('", '').replace("')", '')
         callback_json = json.loads(callback)
@@ -272,17 +280,14 @@ class Login(object):
         rail_expiration = callback_json['exp']
 #        println(rail_expiration)
         req.cookies['RAIL_DEVICEID'] = rail_deviceid
-        req.cookies['RAIL_EXPIRATION'] = rail_expiration
-        # conf
-        # 
-        
+        req.cookies['RAIL_EXPIRATION'] = rail_expiration     
 
     def showimg(self):
         '''显示验证码图片'''
         global req
         html_pic = req.get(self.url_pic, headers=self.headers, verify=False).content
-        open('pic.jpg', 'wb').write(html_pic)
-        img = mpimg.imread('pic.jpg')
+        open('captcha.jpg', 'wb').write(html_pic)
+        img = mpimg.imread('captcha.jpg')
         plt.imshow(img)
         plt.axis('off')
         plt.show()
@@ -388,7 +393,10 @@ class Order(object):
             println('恭喜您,uam验证成功!')
             auth_res.update({'status': True})
         else:
-            println('uam验证失败!' + html_uam['result_message'])
+            if html_uam['result_message']:
+                println('uam验证失败!' + html_uam['result_message'])
+            else:
+                println('uam验证失败!')
             auth_res.update({'status': False})
             return auth_res
 #            exit()
@@ -658,6 +666,9 @@ class Order(object):
             'dwAll': 'N',
             'REPEAT_SUBMIT_TOKEN': token
         }
+        
+        if len(chooseSeatsStr) == 0:
+            form.pop(choose_seats)
         global req
         html_confirm = req.post(self.url_confirm, data=form, headers=self.head_2, verify=False).json()
 #        println(html_confirm)
@@ -713,7 +724,7 @@ class Cancelorder(Login, Order):
                         if 'waitTime' in orderCacheDTO:
                             t = int(orderCacheDTO['waitTime'])
                             if t >= 0:
-                                time.sleep(t + 3)
+                                time.sleep(t + 8)
                             else:
                                 if orderCacheDTO['status'] != 1 and 'message' in orderCacheDTO:
                                     res.update({'status' : False})
@@ -729,7 +740,7 @@ class Cancelorder(Login, Order):
                             except:
                                 pass
                         else:
-                            time.sleep(5)
+                            time.sleep(10)
                     if 'orderDBList' in html_orderinfo['data']:
                         break
                 if 'orderDBList' in html_orderinfo['data']:  
@@ -957,7 +968,8 @@ def order(bkInfo):
 #                                if info[sk] != '无' and info[sk] != '' and (info[38] == '' or str(info[38]).find(cddt_seat_types[sk]) < 0):
                                 if info[sk] != '无' and info[sk] != '':
 #                                    log(info[3] + info[sk])
-                                    seat_flag = True
+                                    if info[sk] == '有' or int(info[sk]) > len(bkInfo.passengers_name):
+                                        seat_flag = True
                                     break
                             if seat_flag:
                                 t_tip  = date + '-' + from_station + '-' + to_station + '-' + info[3]
@@ -1033,23 +1045,6 @@ def order(bkInfo):
                         answer = login.captcha(answer_num)
                         login.login(bkInfo.username, bkInfo.password, answer)
                         auth_res = order.auth()
-#                        if auth_res['status'] == True:
-#                            # 发送邮件提醒
-#                            subject = '自助订票系统--自动登录通知'
-#                            success_info = '<div>主机[' + local_ip + ']正在尝试登录12306账号[' + bkInfo.username + ']进行抢票前的准备工作，若未收到后续通知，请于20分钟后检查您12306账号中是否有未完成订单。</div><div style="color: #000000; padding-top: 5px; padding-bottom: 5px; font-weight: bold;"><div>'
-#                            success_info = success_info + '<div><p>---------------------<br/>From: 12306 PABS<br/>' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '</p><div>'
-#                            email = SendEmail()
-#                            send_res = email.send(bkInfo.email, subject, success_info) 
-#                            if send_res == False:
-#                                println('正在尝试使用邮件代理发送...')
-#                                cmdTxt = 'addmailtask:' + bkInfo.email + '|' + subject + '|' + success_info
-#                                try:
-#                                    client.sendall(cmdTxt.encode(encoding))
-#                                    resp = bytes.decode(client.recv(1024), encoding)
-#                                except:
-#                                    pass
-#                        cancelorder = Cancelorder()
-#                        res = cancelorder.orderinfo()
                     dump(req,_path)
                 for train_idx in trains_idx:
                     t_no = result[int(train_idx) - 1].split('|')[3]
@@ -1063,7 +1058,7 @@ def order(bkInfo):
                     # 提交订单
                     o_res = order.order(result, train_number, from_station, to_station, date)
                     if o_res['status'] is not True and 'messages' in o_res:
-                        if o_res['messages'][0].find('有未处理的订单') > -1 or o_res['messages'][0].find('未完成订单') > -1 :
+                        if o_res['messages'][0].find('有未处理的订单') > -1 or o_res['messages'][0].find('未完成订单') > -1  or o_res['messages'][0].find('行程冲突') > -1 :
                             println('您的账户[' + bkInfo.username + ']中有未完成订单，本次任务结束。')
                             subject = '自助订票系统--任务取消通知'
                             success_info = '<div>主机[' + local_ip + ']通知：您的账户[' + bkInfo.username + ']中有未完成订单，请在12306账号[未完成订单]中处理，本次任务结束。</div><div style="color: #000000; padding-top: 5px; padding-bottom: 5px; font-weight: bold;"><div>当前抢票任务信息如下：</div>'
@@ -1170,10 +1165,6 @@ def order(bkInfo):
                 if train_tip:  
                     println('小黑屋新增成员：['+ train_tip + ']')
                     ticket_black_list.update({train_tip : ticket_black_list_time })
-                
-#                if str(e).find('Expecting value') > -1:
-                    
-#                raise
         
 def run(bkInfo):
 #    print('1.购票  2.取消订单  3.退票')
@@ -1473,7 +1464,7 @@ def dump(obj, path):
 '''反序列化'''        
 def load_obj(path):
     obj = None
-    if os.path.exists(_path) == False:
+    if os.path.exists(path) == False:
         return obj
     try:
         with open(path,'rb') as f:
@@ -1481,6 +1472,25 @@ def load_obj(path):
     except:
         pass
     return obj
+
+def login_sys():
+    order = Order()
+    auth_res = order.auth()
+    uname = None
+    pwd = None
+    while auth_res['status'] != True:
+        if uname == None:  
+            uname =input('请输入12306账号：')
+            pwd = input('请输入12306密码：')
+        login = Login()
+        login.get_rail_deviceid()
+        login.showimg()
+        answer_num = input('请填入验证码(序号为1~8,中间以逗号隔开,例:1,2):')
+        answer = login.captcha(answer_num)
+        login.login(uname, pwd, answer)
+        auth_res = order.auth()
+    dump(req,_path)
+    
 global booking_list
 global cddt_trains
 global thread_list
@@ -1511,6 +1521,9 @@ if __name__ == '__main__':
         req = load_obj(_path)
         if req == None:
             req = requests.Session()
+        if cfg['auto_auth'] == False:
+            login_sys()
+        
         check_sleep_time('系统将在06:00以后继续抢票')
         log('*' * 30 + '12306自动抢票开始' + '*' * 30)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
