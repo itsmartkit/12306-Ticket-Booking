@@ -35,6 +35,7 @@ import logging
 import pickle
 import yaml
 import time
+import getpass
 
 cwd_path = os.path.abspath(os.getcwd())
 cfg = yaml.load(open(cwd_path + '/config/conf.yaml','r', encoding='utf-8'))
@@ -1492,7 +1493,7 @@ def login_sys():
     while auth_res['status'] != True:
         if uname == None:  
             uname =input('请输入12306账号：')
-            pwd = input('请输入12306密码：')
+            pwd = getpass.getpass('请输入12306密码：')
         login = Login()
         login.get_rail_deviceid()
         login.showimg()

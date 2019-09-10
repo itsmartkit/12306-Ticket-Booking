@@ -2,7 +2,7 @@
 =============================
 ### 系统功能
 1.余票监控：发现余票自动下单<br>
-2.自动打码：采用第三方免费接口，自动跳过图片验证码<br>
+2.自动打码：采用第三方免费接口/本地识别算法两种模式，自动验证图片验证码<br>
 3.小黑屋：发展有余票但是下单失败的车次，自动加入小黑屋<br>
 4.邮件通知：下单异常或下单成功后邮件通知用户，以便及时处理<br>
 5.全国CDN轮询：提供余票查询频率的同时尽量避免IP被封禁<br>
@@ -30,11 +30,13 @@ utils/sendEmail.py--邮件发送模块<br>
 main.py--主程序<br>
 server.py--邮件代发服务端程序<br>
 client.py--邮件代发客户端程序(ps: 有些网络下邮件发送失败，需要代发)<br>
+12306.image.model.h5--图片识别数据文件，文件过大未上传至仓库，请自行下载(https://pan.baidu.com/s/1OsBIBM4rl8EnpZt7VYiD9g)<br>
 
 ### 致谢
 程序参考了部分开源项目，对以下同仁表示感谢~<br>
 下单程序参考 https://github.com/Henryhaohao/12306_Ticket.git 感谢 [Henryhaohao](https://github.com/Henryhaohao/12306_Ticket.git)<br> 
 全国CDN获取参考 https://github.com/testerSunshine/12306.git 感谢 [文贤平](https://github.com/testerSunshine/12306.git)<br>
+验证码识别算法参考 https://github.com/zhaipro/easy12306.git 感谢 [宅教授](https://github.com/zhaipro/easy12306.git)<br>
 
 ### 总结
 订票信息配置正确便可运行，适合有一定编程基础的读者<br>
