@@ -12,7 +12,11 @@ server_ip : '39.95.20.xxx'
 server_port : 12306
 
 # 自动识别验证码
-auto_auth : True
+auto_captcha : True
+
+captcha_mode : 'local'#local/net
+
+captcha_path : 'captcha.jpg'
 
 # 真实主机 ip
 real_host : '61.147.226.185'

@@ -29,6 +29,7 @@ import urllib3
 from utils.cdnUtils import CDNProxy
 from utils.httpUtils import HTTPClient
 from utils.sendEmail import SendEmail
+from captcha.captcha import Captcha
 
 import logging
 import pickle
@@ -57,6 +58,8 @@ req = requests.Session()
 is_check_sleep_time = cfg['check_sleep_time']
 
 encoding = cfg['encoding']
+
+captcha_path = cfg['captcha_path']
 
 seat_type = {'无座': '1', '硬座': '1', '硬卧': '3', '二等卧': 'J','软卧': '4','一等卧': 'I', '高级软卧': '6', '动卧': 'F', '二等座': 'O', '一等座': 'M', '商务座': '9'}
 
@@ -288,8 +291,8 @@ class Login(object):
         '''显示验证码图片'''
         global req
         html_pic = req.get(self.url_pic, headers=self.headers, verify=False).content
-        open('captcha.jpg', 'wb').write(html_pic)
-        img = mpimg.imread('captcha.jpg')
+        open(captcha_path, 'wb').write(html_pic)
+        img = mpimg.imread(captcha_path)
         plt.imshow(img)
         plt.axis('off')
         plt.show()
@@ -813,9 +816,15 @@ def pass_captcha():
     html_pic = req.get(url_pic, headers=headers, verify=False).content
     base64_str = base64.b64encode(html_pic).decode()
 #    print(base64_str)
-    open('captcha.jpg', 'wb').write(html_pic)
+    open(captcha_path, 'wb').write(html_pic)
+    
+    # 采用本地识别算法
+    if cfg['captcha_mode'] == 'local':
+        captcha = Captcha()
+        return captcha.main(captcha_path)
+    
     files = {
-        'pic_xxfile': open('captcha.jpg', 'rb')
+        'pic_xxfile': open(captcha_path, 'rb')
     }
     headers = {
         'Referer': url_captcha,
@@ -1540,7 +1549,7 @@ if __name__ == '__main__':
         req = load_obj(_path)
         if req == None:
             req = requests.Session()
-        if cfg['auto_auth'] == False:
+        if cfg['auto_captcha'] == False:
             login_sys()
         check_sleep_time('系统将在06:00以后继续抢票')
         get_left_ticket_path()
@@ -1548,17 +1557,13 @@ if __name__ == '__main__':
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         client.connect((server_ip, 12306))
-    #    t = threading.Thread(target=keepalive, args=())
-    #    t.start()
-    #    client.connect(('127.0.0.1', 12306))
-    #    schedule.every(keep_alive_time).seconds.do(keepalive)
         booking_list = {}
         cddt_trains = {}
         thread_list = {}
         try_count = {}
         booking_now = {}
         local_ip = getip()
-    #    time.sleep(300)
+
         cdn_certification()
     
         task()
