@@ -139,14 +139,16 @@ class Leftquery(object):
             if cdn_list:
                 host = cdn_list[random.randint(0, len(cdn_list) - 1)]
         log('[{}]: 余票查询开始，请求主机 --> [{}]'.format(threading.current_thread().getName(), host))
-        url = 'https://'+ host +'/otn/leftTicket/queryA?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
-            date, fromstation, tostation)
+        url = 'https://{}/otn/{}?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
+            host, left_ticket_path, date, fromstation, tostation)
 #        print(url)
         try:
 #            proxie = "{'http': 'http://127.0.0.1:8580'}"
             q_res = requests.get(url, headers=self.headers, timeout=3, verify=False)
             if q_res.status_code != 200:
                 print(q_res.status_code)
+                if q_res.status_code == 302:
+                    get_left_ticket_path();
                 return
             html = q_res.json()
 #            print(html)
@@ -968,7 +970,7 @@ def order(bkInfo):
 #                                if info[sk] != '无' and info[sk] != '' and (info[38] == '' or str(info[38]).find(cddt_seat_types[sk]) < 0):
                                 if info[sk] != '无' and info[sk] != '':
 #                                    log(info[3] + info[sk])
-                                    if info[sk] == '有' or int(info[sk]) > len(bkInfo.passengers_name):
+                                    if info[sk] == '有' or int(info[sk]) >= len(bkInfo.passengers_name):
                                         seat_flag = True
                                     break
                             if seat_flag:
@@ -1490,7 +1492,22 @@ def login_sys():
         login.login(uname, pwd, answer)
         auth_res = order.auth()
     dump(req,_path)
-    
+
+def get_left_ticket_path():
+    global req
+    global left_ticket_path
+    init_url = 'https://kyfw.12306.cn/otn/leftTicket/init'
+    headers = {
+        'Host': 'kyfw.12306.cn',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+    }
+    html = req.get(init_url, headers=headers, verify=False).text
+    ltp = re.findall(r'var CLeftTicketUrl = \'(.*?)\';', str(html))
+    if ltp:
+        left_ticket_path = ltp[0]
+    else:
+        left_ticket_path = 'leftTicket/queryA'
+
 global booking_list
 global cddt_trains
 global thread_list
@@ -1498,6 +1515,8 @@ global try_count
 global booking_now
 global client
 global local_ip
+global left_ticket_path
+
 cdn_list = []
 time_out_cdn = {}
 ticket_black_list = {}
@@ -1523,8 +1542,8 @@ if __name__ == '__main__':
             req = requests.Session()
         if cfg['auto_auth'] == False:
             login_sys()
-        
         check_sleep_time('系统将在06:00以后继续抢票')
+        get_left_ticket_path()
         log('*' * 30 + '12306自动抢票开始' + '*' * 30)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
