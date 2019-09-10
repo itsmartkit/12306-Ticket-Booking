@@ -12,7 +12,7 @@ import yaml
 import os
 
 cfg_path = os.path.abspath(os.path.join(os.path.abspath(os.path.dirname(__file__)),'..'))
-cfg = yaml.load(open(cfg_path + '/config/conf.yaml','r', encoding='utf-8'), Loader=yaml.FullLoader)
+cfg = yaml.load(open(cfg_path + '/config/conf.yaml','r', encoding='utf-8'))
 
 class SendEmail(object):
     def __init__(self):

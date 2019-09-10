@@ -36,7 +36,7 @@ import yaml
 import time
 
 cwd_path = os.path.abspath(os.getcwd())
-cfg = yaml.load(open(cwd_path + '/config/conf.yaml','r', encoding='utf-8'), Loader=yaml.FullLoader)
+cfg = yaml.load(open(cwd_path + '/config/conf.yaml','r', encoding='utf-8'))
 
 logger = logging.getLogger(cfg['sys_name'])
 logger.setLevel(logging.DEBUG)
@@ -1315,7 +1315,7 @@ def task():
         clt.close()
     except:
         pass
-    bks = yaml.load(open(cwd_path + '/' + filename,'r', encoding='utf-8'), Loader=yaml.FullLoader)
+    bks = yaml.load(open(cwd_path + '/' + filename,'r', encoding='utf-8'))
     bookings = bks['bookings']
     for booking in bookings:
         if booking['is_work']== False :
