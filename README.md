@@ -30,7 +30,8 @@ utils/sendEmail.py--邮件发送模块<br>
 main.py--主程序<br>
 server.py--邮件代发服务端程序<br>
 client.py--邮件代发客户端程序(ps: 有些网络下邮件发送失败，需要代发)<br>
-12306.image.model.h5--图片识别数据文件，文件过大未上传至仓库，请自行[下载](https://pan.baidu.com/s/1OsBIBM4rl8EnpZt7VYiD9g)<br>
+captcha/model.h5--文字识别数据文件
+captcha/12306.image.model.h5--图片识别数据文件，数据文件未上传至仓库，请自行[下载](https://pan.baidu.com/s/1OsBIBM4rl8EnpZt7VYiD9g)<br>
 
 ### 致谢
 程序参考了部分开源项目，对以下同仁表示感谢~<br>
