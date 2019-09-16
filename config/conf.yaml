@@ -17,6 +17,8 @@ auto_captcha : True
 # 是否启用webdriver
 enable_webdriver : True
 
+index_page : 'https://kyfw.12306.cn/otn/leftTicket/init'
+
 captcha_mode : 'local'#local/net
 
 captcha_path : 'captcha.jpg'
@@ -32,7 +34,7 @@ sys_name : 'PABS'
 log_path : 'log/logging.log'
 
 # 是否检查休息时间 默认：True
-check_sleep_time : True
+check_sleep_time : False
 
 # 是否核心抢票模式 默认：False, 且建议 False
 is_core : False
@@ -56,7 +58,7 @@ keep_alive_time : 2
 # 所抢车次发车前预留最小空余时间，单位min
 free_time : 80 
 # 相邻两次请求间隔时间，单位s
-sleep_base : 1
+sleep_base : 5
 # 定时任务执行周期
 timespan : 1
 # 是否循环播放音乐 True/False, 默认：False

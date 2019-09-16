@@ -37,6 +37,8 @@ import pickle
 import yaml
 import time
 import getpass
+import demjson
+import psutil
 
 cwd_path = os.path.abspath(os.getcwd())
 cfg = yaml.load(open(cwd_path + '/config/conf.yaml','r', encoding='utf-8'))
@@ -67,7 +69,6 @@ seat_type = {'无座': '1', '硬座': '1', '硬卧': '3', '二等卧': 'J','软�
 
 seat_dic = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座', 33: '动卧'}
 
-driver = webdriver.Chrome()
 
 def conversion_int(str):
     return int(str)
@@ -119,9 +120,9 @@ class Leftquery(object):
 #            print(self.station_url)
             html = None
             try:
-               html = requests.get(self.station_url, verify=False).text 
+               html = req.get(self.station_url, verify=False).text 
             except:
-               html = requests.get('http://' + server_ip + '/js/station_name.js', verify=False).text 
+               html = req.get('http://' + server_ip + '/js/station_name.js', verify=False).text 
 #            print(html)
             self.station_name_res = html.split('@')[1:]
 #            time.sleep(60)
@@ -143,7 +144,7 @@ class Leftquery(object):
         html = q_res.json()
         return html
         
-    def query_by_webdriver(url):
+    def query_by_webdriver(self, url):
         try:
             global driver
             if driver==None:
@@ -151,16 +152,20 @@ class Leftquery(object):
             html = None
             try:
                 #driver = webdriver.PhantomJS()
-                driver.set_page_load_timeout(3)  
+                driver.set_page_load_timeout(5)  
                 driver.get(url)
 #                js = "window.scrollTo(0,document.body.scrollHeight/3)"  #
 #                driver.execute_script(js)
-                html = driver.page_source
+                for cookie in driver.get_cookies():
+                    if cookie['name'] != 'JSESSIONID':
+                        req.cookies[cookie['name']] = cookie['value']
+                html = demjson.decode(driver.find_element_by_tag_name('pre').text)
+                
                 #print('chrome')
             except BaseException as e:
                 log(e)
             finally:
-                driver.close()
+#                driver.close()
                 return html
         except BaseException as ex:
             log(ex)
@@ -172,12 +177,13 @@ class Leftquery(object):
         tostation = self.station_name(to_station)
         self.n = n
         host = 'kyfw.12306.cn'
-        if is_core:
-            host = real_host
-        else:
-            if cdn_list:
-                host = cdn_list[random.randint(0, len(cdn_list) - 1)]
-        log('[{}]: 余票查询开始，请求主机 --> [{}]'.format(threading.current_thread().getName(), host))
+#        if is_core:
+#            host = real_host
+#        else:
+#            if cdn_list:
+#                host = cdn_list[random.randint(0, len(cdn_list) - 1)]
+#        log('[{}]: 余票查询开始，请求主机 --> [{}]'.format(threading.current_thread().getName(), host))
+#        host = 'kyfw.12306.cn'
         url = 'https://{}/otn/{}?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
             host, left_ticket_path, date, fromstation, tostation)
 #        print(url)
@@ -313,15 +319,15 @@ class Login(object):
 #            html = requests.get('https://kyfw.12306.cn/otn/HttpZF/GetJS', headers=self.headers).text
 #            algID = re.search(r'algID\\x3d(.*?)\\x', html).group(1)
 #            dump(algID, algID_path)
-        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=J3bG06RZnc&hashCode=-wxti33vNkVmnROAg6lZ6vxZ5KwK8sziRm7wW_JxUiI&FMQw=1&q4f3=zh-CN&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=382b3eb7cfc5d30f1b59cb283d1acaf3&lEnu=3232235885&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=Linux%20x86_64&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=1003x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(X11;%20Linux%20x86_64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/75.0.3770.142%20Safari/537.36&E3gR=7484b4d443309cac29a8c080495fc1c0&timestamp='
-        html_rail_deviceid = req.get(url_rail_deviceid + str(int(time.time()*1000)),headers=self.headers).text
-        callback = html_rail_deviceid.replace("callbackFunction('", '').replace("')", '')
-        callback_json = json.loads(callback)
-        rail_deviceid = callback_json['dfp']
-        rail_expiration = callback_json['exp']
-#        println(rail_expiration)
-        req.cookies['RAIL_DEVICEID'] = rail_deviceid
-        req.cookies['RAIL_EXPIRATION'] = rail_expiration     
+#        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=J3bG06RZnc&hashCode=-wxti33vNkVmnROAg6lZ6vxZ5KwK8sziRm7wW_JxUiI&FMQw=1&q4f3=zh-CN&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=382b3eb7cfc5d30f1b59cb283d1acaf3&lEnu=3232235885&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=Linux%20x86_64&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=1003x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(X11;%20Linux%20x86_64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/75.0.3770.142%20Safari/537.36&E3gR=7484b4d443309cac29a8c080495fc1c0&timestamp='
+#        html_rail_deviceid = req.get(url_rail_deviceid + str(int(time.time()*1000)),headers=self.headers).text
+#        callback = html_rail_deviceid.replace("callbackFunction('", '').replace("')", '')
+#        callback_json = json.loads(callback)
+#        rail_deviceid = callback_json['dfp']
+#        rail_expiration = callback_json['exp']
+##        println(rail_expiration)
+#        req.cookies['RAIL_DEVICEID'] = rail_deviceid
+#        req.cookies['RAIL_EXPIRATION'] = rail_expiration     
 
     def showimg(self):
         '''显示验证码图片'''
@@ -872,7 +878,7 @@ def pass_captcha():
     except:
 #        log(e)
         try:
-            res = requests.post(url_captcha, files=files, headers=headers, verify=False).text
+            res = req.post(url_captcha, files=files, headers=headers, verify=False).text
             result = re.search('<B>(.*?)</B>', res).group(1).replace(' ', ',')
             return result 
         except:
@@ -1553,6 +1559,13 @@ def get_left_ticket_path():
     else:
         left_ticket_path = 'leftTicket/queryA'
 
+def kill_all_chromedriver():
+    pids = psutil.pids()
+    for pid in pids:
+        p = psutil.Process(pid)
+        if p.name() == 'chromedriver.exe':
+             os.popen('taskkill.exe /pid:' + str(pid))
+
 global booking_list
 global cddt_trains
 global thread_list
@@ -1579,9 +1592,15 @@ server_port = cfg['server_port']
 _path = cfg['req_cache_path']
 is_core = cfg['is_core']
 real_host = cfg['real_host']
+driver = None
+
 
 if __name__ == '__main__':
     try:
+        kill_all_chromedriver()
+        if driver == None:
+            driver = webdriver.Chrome()
+        driver.get(cfg['index_page'])
         req = load_obj(_path)
         if req == None:
             req = requests.Session()
