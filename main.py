@@ -30,6 +30,7 @@ from utils.cdnUtils import CDNProxy
 from utils.httpUtils import HTTPClient
 from utils.sendEmail import SendEmail
 from captcha.captcha import Captcha
+from selenium import webdriver
 
 import logging
 import pickle
@@ -66,7 +67,7 @@ seat_type = {'无座': '1', '硬座': '1', '硬卧': '3', '二等卧': 'J','软�
 
 seat_dic = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座', 33: '动卧'}
 
-
+driver = webdriver.Chrome()
 
 def conversion_int(str):
     return int(str)
@@ -131,6 +132,40 @@ class Leftquery(object):
             dict[key] = value
         return dict[station]
 
+    def query_by_requests(self, url):
+        html = None
+        q_res = req.get(url, headers=self.headers, timeout=3, verify=False)
+        if q_res.status_code != 200:
+            print(q_res.status_code)
+            if q_res.status_code == 302:
+                get_left_ticket_path();
+            return html
+        html = q_res.json()
+        return html
+        
+    def query_by_webdriver(url):
+        try:
+            global driver
+            if driver==None:
+                driver = webdriver.Chrome()
+            html = None
+            try:
+                #driver = webdriver.PhantomJS()
+                driver.set_page_load_timeout(3)  
+                driver.get(url)
+#                js = "window.scrollTo(0,document.body.scrollHeight/3)"  #
+#                driver.execute_script(js)
+                html = driver.page_source
+                #print('chrome')
+            except BaseException as e:
+                log(e)
+            finally:
+                driver.close()
+                return html
+        except BaseException as ex:
+            log(ex)
+    
+    
     def query(self, n, from_station, to_station, date, cddt_train_types):
         '''余票查询'''
         fromstation = self.station_name(from_station)
@@ -148,13 +183,13 @@ class Leftquery(object):
 #        print(url)
         try:
 #            proxie = "{'http': 'http://127.0.0.1:8580'}"
-            q_res = requests.get(url, headers=self.headers, timeout=3, verify=False)
-            if q_res.status_code != 200:
-                print(q_res.status_code)
-                if q_res.status_code == 302:
-                    get_left_ticket_path();
+            html = None
+            if cfg['enable_webdriver']:
+                html = self.query_by_webdriver(url)
+            else:
+                html = self.query_by_requests(url)
+            if html == None:
                 return
-            html = q_res.json()
 #            print(html)
             result = html['data']['result']
             if result == []:
