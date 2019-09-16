@@ -14,6 +14,9 @@ server_port : 12306
 # 自动识别验证码
 auto_captcha : True
 
+# 是否启用webdriver
+enable_webdriver : True
+
 captcha_mode : 'local'#local/net
 
 captcha_path : 'captcha.jpg'
