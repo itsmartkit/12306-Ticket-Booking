@@ -118,9 +118,9 @@ class Leftquery(object):
 #            print(self.station_url)
             html = None
             try:
-               html = requests.get(self.station_url, verify=False).text 
+               html = req.get(self.station_url, verify=False).text 
             except:
-               html = requests.get('http://' + server_ip + '/js/station_name.js', verify=False).text 
+               html = req.get('http://' + server_ip + '/js/station_name.js', verify=False).text 
 #            print(html)
             self.station_name_res = html.split('@')[1:]
 #            time.sleep(60)
@@ -148,7 +148,7 @@ class Leftquery(object):
 #        print(url)
         try:
 #            proxie = "{'http': 'http://127.0.0.1:8580'}"
-            q_res = requests.get(url, headers=self.headers, timeout=3, verify=False)
+            q_res = req.get(url, headers=self.headers, timeout=3, verify=False)
             if q_res.status_code != 200:
                 print(q_res.status_code)
                 if q_res.status_code == 302:
