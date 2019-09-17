@@ -17,6 +17,8 @@ auto_captcha : True
 # 是否启用webdriver
 enable_webdriver : True
 
+webdriver_path : '/usr/local/bin/chromedriver'
+
 index_page : 'https://kyfw.12306.cn/otn/leftTicket/init'
 
 captcha_mode : 'local'#local/net

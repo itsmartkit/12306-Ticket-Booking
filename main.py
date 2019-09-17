@@ -69,6 +69,7 @@ seat_type = {'无座': '1', '硬座': '1', '硬卧': '3', '二等卧': 'J','软�
 
 seat_dic = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座', 33: '动卧'}
 
+webdriver_path = cfg['webdriver_path']
 
 def conversion_int(str):
     return int(str)
@@ -148,7 +149,7 @@ class Leftquery(object):
         try:
             global driver
             if driver==None:
-                driver = webdriver.Chrome()
+                driver = webdriver.Chrome(webdriver_path)
             html = None
             try:
                 #driver = webdriver.PhantomJS()
@@ -1628,7 +1629,7 @@ if __name__ == '__main__':
     try:
         kill_all_chromedriver()
         if driver == None:
-            driver = webdriver.Chrome()
+            driver = webdriver.Chrome(webdriver_path)
         driver.get(cfg['index_page'])
         req = load_obj(_path)
         if req == None:
