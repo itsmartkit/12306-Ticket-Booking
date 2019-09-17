@@ -159,6 +159,7 @@ class Leftquery(object):
                 for cookie in driver.get_cookies():
                     if cookie['name'] != 'JSESSIONID':
                         req.cookies[cookie['name']] = cookie['value']
+#                print(driver.page_source)
                 html = demjson.decode(driver.find_element_by_tag_name('pre').text)
                 
                 #print('chrome')
@@ -177,20 +178,21 @@ class Leftquery(object):
         tostation = self.station_name(to_station)
         self.n = n
         host = 'kyfw.12306.cn'
-#        if is_core:
-#            host = real_host
-#        else:
-#            if cdn_list:
-#                host = cdn_list[random.randint(0, len(cdn_list) - 1)]
-#        log('[{}]: 余票查询开始，请求主机 --> [{}]'.format(threading.current_thread().getName(), host))
-#        host = 'kyfw.12306.cn'
+        if is_core:
+            host = real_host
+        else:
+            if cdn_list:
+                host = cdn_list[random.randint(0, len(cdn_list) - 1)]
+        if n == 1:
+            host = 'kyfw.12306.cn'
+        log('[{}]: 余票查询开始，请求主机 --> [{}]'.format(threading.current_thread().getName(), host))
         url = 'https://{}/otn/{}?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
             host, left_ticket_path, date, fromstation, tostation)
 #        print(url)
         try:
 #            proxie = "{'http': 'http://127.0.0.1:8580'}"
             html = None
-            if cfg['enable_webdriver']:
+            if cfg['enable_webdriver'] and n == 1:
                 html = self.query_by_webdriver(url)
             else:
                 html = self.query_by_requests(url)
@@ -409,6 +411,7 @@ class Order(object):
         self.url_confirm = 'https://kyfw.12306.cn/otn/confirmPassenger/confirmSingleForQueue'
         self.url_checkorder = 'https://kyfw.12306.cn/otn/confirmPassenger/checkOrderInfo'
         self.url_count = 'https://kyfw.12306.cn/otn/confirmPassenger/getQueueCount'
+        self.url_query_waittime = 'https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime'
         self.head_1 = {
             'Host': 'kyfw.12306.cn',
             'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init',
@@ -417,7 +420,7 @@ class Order(object):
         self.head_2 = {
             'Host': 'kyfw.12306.cn',
             'Referer': 'https://kyfw.12306.cn/otn/confirmPassenger/initDc',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36',
         }
 
     def auth(self):
@@ -554,6 +557,7 @@ class Order(object):
 #        print('\n')
 #        print('乘客信息列表:')
 #        for i in passengers:
+#            println(i)
 #            print(str(int(i['index_id']) + 1) + '号:' + i['passenger_name'] + ' ', end='')
 #        print('\n')
         return passengers
@@ -569,6 +573,7 @@ class Order(object):
         pass_dict = []
         for i in pass_list:
             info = passengers[int(i) - 1]
+#            println(info)
             pass_name = info['passenger_name']  # 名字
             pass_id = info['passenger_id_no']  # 身份证号
             pass_phone = info['mobile_no']  # 手机号码
@@ -585,28 +590,15 @@ class Order(object):
             }
             pass_dict.append(dict)
 
-        num = 0
-        TicketStr_list = []
+#        num = 0
+#        TicketStr_list = []
+        passengerTicketStr = ''
         for i in pass_dict:
-            if pass_num == 1:
-                TicketStr = i['choose_type'] + ',0,1,' + i['pass_name'] + ',' + i['pass_type'] + ',' + i[
-                    'pass_id'] + ',' + i['pass_phone'] + ',N' + ',' + i['all_enc_str']
-                TicketStr_list.append(TicketStr)
-            elif num == 0:
-                TicketStr = i['choose_type'] + ',0,1,' + i['pass_name'] + ',' + i['pass_type'] + ',' + i[
-                    'pass_id'] + ',' + i['pass_phone'] + ','
-                TicketStr_list.append(TicketStr)
-            elif num == pass_num - 1:
-                TicketStr = 'N,' + i['all_enc_str'] + '_' + i['choose_type'] + ',0,1,' + i['pass_name'] + ',' + i['pass_type'] + ',' + i[
-                    'pass_id'] + ',' + i['pass_phone'] + ',N' + ',' + i['all_enc_str']
-                TicketStr_list.append(TicketStr)
-            else:
-                TicketStr = 'N,' + i['all_enc_str'] + '_' + i['choose_type'] + ',0,1,' + i['pass_name'] + ',' + i['pass_type'] + ',' + i[
-                    'pass_id'] + ',' + i['pass_phone'] + ','
-                TicketStr_list.append(TicketStr)
-            num += 1
+            TicketStr = i['choose_type'] + ',0,1,' + i['pass_name'] + ',' + i['pass_type'] + ',' + i[
+                'pass_id'] + ',' + i['pass_phone'] + ',N,' + i['all_enc_str']
+            passengerTicketStr += TicketStr + '_'
 
-        passengerTicketStr = ''.join(TicketStr_list)
+        passengerTicketStr = passengerTicketStr[:-1]
 #        log(passengerTicketStr)
 
         num = 0
@@ -627,6 +619,8 @@ class Order(object):
             num += 1
 
         oldpassengerStr = ''.join(passengrStr_list)
+        if num > 1:
+            oldpassengerStr = oldpassengerStr + '_' 
         println(oldpassengerStr)
         
         form = {
@@ -714,8 +708,8 @@ class Order(object):
             'REPEAT_SUBMIT_TOKEN': token
         }
         
-        if len(chooseSeatsStr) == 0:
-            form.pop(choose_seats)
+#        if len(chooseSeatsStr) == 0:
+#            form.pop(choose_seats)
         global req
         html_confirm = req.post(self.url_confirm, data=form, headers=self.head_2, verify=False).json()
 #        println(html_confirm)
@@ -735,7 +729,40 @@ class Order(object):
         resDict.update({'msg' : msg})
         println(msg)
         return resDict
-
+    
+    def queryOrderWaitTime(self,token):
+        resDict = {}
+        resDict.update({'status' : False})
+        msg = ''
+        try:
+            global req
+            n = 0
+            while n < 30:
+                n += 1
+                println('第[' + str(n) + ']次查询订单状态...')
+                url = self.url_query_waittime + '?random={}&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN={}'.format(str(int(time.time()*1000)), token)
+                html = req.get(url, headers=self.head_2, verify=False).json()
+#                println(html)
+                if html['status'] and html['data']['queryOrderWaitTimeStatus']:
+                    waitTime = html['data']['waitTime']
+                    if waitTime == -1:
+                        resDict.update({'status' : True})
+                        resDict.update({'orderId' : html['data']['orderId']})
+                        msg = '占座成功'
+                    elif waitTime == -100:
+                        time.sleep(10)
+                    elif waitTime < 0:
+                        msg = html['data']['msg']
+                        break
+                    else:
+                        time.sleep(int(waitTime))
+                else:
+                    msg = html['data']['messages']
+        except Exception as ex:
+            log(ex)
+            msg = ex
+        resDict.update({'msg' : msg})
+        return resDict
 class Cancelorder(Login, Order):
     '''取消订单'''
 
@@ -1173,8 +1200,9 @@ def order(bkInfo):
                         res = order.confirm(pass_info[0], pass_info[1], content[9], content[5], content[6], content[7], bkInfo.choose_seats, content[8])
                         
                         if res['status']:
-                            cancelorder = Cancelorder()
-                            res = cancelorder.orderinfo()
+                            res = order.queryOrderWaitTime(content[8])
+#                            cancelorder = Cancelorder()
+#                            res = cancelorder.orderinfo()
                             if res['status'] != True:
                                 println(res['msg'])
                                 res.update({'msg' : res['msg']})
@@ -1187,7 +1215,7 @@ def order(bkInfo):
                             println('恭喜您，抢票成功！')
                             subject = '自助订票系统--订票成功通知'
                             success_info = '<div>主机[' + local_ip + ']通知：恭喜您，车票预订成功，请及时支付！</div><div style="color: #000000; padding-top: 5px; padding-bottom: 5px; font-weight: bold;"><div>订单信息如下：</div>'
-                            success_info = success_info + p_name + ' ' + date + '，' + from_station + '-->' + to_station + '，' + t_no + '次列车，' + choose_seat +'。</div>'
+                            success_info = success_info + '订单号码：' + res['orderId'] + '，' + p_name + ' ' + date + '，' + from_station + '-->' + to_station + '，' + t_no + '次列车，' + choose_seat +'。</div>'
                             success_info = success_info + '<div><p>---------------------<br/>From: 12306 PABS<br/>' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '</p><div>'
                             email = SendEmail()
                             send_res = email.send(bkInfo.email, subject, success_info)
@@ -1214,7 +1242,7 @@ def order(bkInfo):
                     lock.release()
             except Exception as e:
                 log('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 本次下单异常...')
-                log(e)
+#                raise
                 if train_tip:  
                     println('小黑屋新增成员：['+ train_tip + ']')
                     ticket_black_list.update({train_tip : ticket_black_list_time })
@@ -1234,6 +1262,7 @@ def run(bkInfo):
             order(bkInfo)
             flag = True
         except BaseException as ex:
+#            raise
             log(ex)
             n += 1
             time.sleep(3)
