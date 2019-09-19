@@ -1076,6 +1076,17 @@ def order(bkInfo):
                                         println(temp)
                                     
                                 else:
+                                    sot = info[8].split(':') 
+                                    art = info[9].split(':')
+                                    tsp = info[10].split(':')
+                                    t1 = int(sot[0]) * 60 + int(sot[1])
+                                    t3 = int(art[0]) * 60 + int(art[1])
+                                    ts = int(tsp[0]) * 60 + int(tsp[1])
+                                    now = datetime.datetime.now()
+                                    departure = date == now.strftime('%Y-%m-%d')
+                                    t5 = now.hour * 60 + now.minute + free_time
+                                    if (t3-t1) < ts or (departure and t5 > t1):
+                                        continue
                                     if info[3] == train:
                                         trains_idx.append(num)
                                     else:
@@ -1083,29 +1094,11 @@ def order(bkInfo):
                                         if len(bkInfo.min_set_out_time) > 0 and len(bkInfo.max_arrival_time) > 0:
                                             msot = bkInfo.min_set_out_time.split(':')
                                             mart = bkInfo.max_arrival_time.split(':')
-                                            sot = info[8].split(':') 
-                                            art = info[9].split(':')
-                                            tsp = info[10].split(':')
-                                            t1 = int(sot[0]) * 60 + int(sot[1])
                                             t2 = int(msot[0]) * 60 + int(msot[1])
-                                            t3 = int(art[0]) * 60 + int(art[1])
                                             t4 = int(mart[0]) * 60 + int(mart[1])
-                                            ts = int(tsp[0]) * 60 + int(tsp[1])
                                             # 保证在区间内
-                                            if t1 >= t2 and t3 <= t4 and (t3-t1) >= ts:
-        #                                            print(info[3])
-                                                now = datetime.datetime.now()
-                                                departure = date == now.strftime('%Y-%m-%d')
-                                                if departure:
-#                                                    print('当前为出发当天')
-                                                    # 当前时间 + free_time
-                                                    t5 = now.hour * 60 + now.minute + free_time
-#                                                    print('t1: '+ str(t1))
-#                                                    print('t5: '+ str(t5))
-                                                    if t5 < t1:
-                                                        temp_trains_idx.append(num)
-                                                else:
-                                                    temp_trains_idx.append(num)
+                                            if t1 >= t2 and t3 <= t4:
+                                                temp_trains_idx.append(num)
                     num += 1
                 if temp_trains_idx:
                     trains_idx.extend(temp_trains_idx)
