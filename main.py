@@ -158,7 +158,7 @@ class Leftquery(object):
 #                js = "window.scrollTo(0,document.body.scrollHeight/3)"  #
 #                driver.execute_script(js)
                 for cookie in driver.get_cookies():
-                    if cookie['name'] != 'JSESSIONID':
+                    if cookie['name'] == 'RAIL_EXPIRATION' or cookie['name'] == 'RAIL_DEVICEID':
                         req.cookies[cookie['name']] = cookie['value']
 #                print(driver.page_source)
                 html = demjson.decode(driver.find_element_by_tag_name('pre').text)
@@ -406,8 +406,10 @@ class Order(object):
     def __init__(self):
         self.url_uam = 'https://kyfw.12306.cn/passport/web/auth/uamtk'
         self.url_uamclient = 'https://kyfw.12306.cn/otn/uamauthclient'
+        self.url_checkuser = 'https://kyfw.12306.cn/otn/login/checkUser'
         self.url_order = 'https://kyfw.12306.cn/otn/leftTicket/submitOrderRequest'
         self.url_token = 'https://kyfw.12306.cn/otn/confirmPassenger/initDc'
+        self.url_passcode = 'https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&{}'
         self.url_pass = 'https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs'
         self.url_confirm = 'https://kyfw.12306.cn/otn/confirmPassenger/confirmSingleForQueue'
         self.url_checkorder = 'https://kyfw.12306.cn/otn/confirmPassenger/checkOrderInfo'
@@ -425,15 +427,20 @@ class Order(object):
         }
 
     def auth(self):
-        '''验证uamtk和uamauthclient'''
-        # 验证uamtk
         auth_res = {'status': True}
-        
         form = {
-            'appid': 'otn',
-            # '_json_att':''
+            '_json_att':''
         }
         global req
+#        resp_checkuser = req.post(self.url_checkuser, data=form, headers=self.head_1, verify=False).json()
+#        if resp_checkuser['status'] and resp_checkuser['data']['flag']:
+#            return auth_res
+        '''验证uamtk和uamauthclient'''
+        # 验证uamtk
+        form = {
+            'appid': 'otn',
+            '_json_att':''
+        }
         resp_uam = req.post(self.url_uam, data=form, headers=self.head_1, verify=False)
         if resp_uam.status_code != 200:
             println('验证uam失败: response ' + str(resp_uam.status_code))
@@ -456,7 +463,7 @@ class Order(object):
 
         form = {
             'tk': tk,
-            # '_json_att':''
+             '_json_att':''
         }
         html_uamclient = req.post(self.url_uamclient, data=form, headers=self.head_1, verify=False).json()
 #        println(html_uamclient)
@@ -490,6 +497,7 @@ class Order(object):
         global req
         html_order = req.post(self.url_order, data=form, headers=self.head_1, verify=False).json()
 #        log(html_order)
+#        println(req.cookies)
         if html_order['status'] == True:
             println('尝试提交订单...')
         else:
@@ -553,8 +561,13 @@ class Order(object):
             'REPEAT_SUBMIT_TOKEN': token
         }
         global req
-        html_pass = req.post(self.url_pass, data=form, headers=self.head_1, verify=False).json()
+        # getPassCodeNew
+        url = self.url_passcode.format(random.random())
+        passCode = req.get(url, headers=self.head_2, verify=False).content
+#        print(passCode)
+        html_pass = req.post(self.url_pass, data=form, headers=self.head_2, verify=False).json()
         passengers = html_pass['data']['normal_passengers']
+#        println(req.cookies)
 #        print('\n')
 #        print('乘客信息列表:')
 #        for i in passengers:
@@ -600,7 +613,7 @@ class Order(object):
             passengerTicketStr += TicketStr + '_'
 
         passengerTicketStr = passengerTicketStr[:-1]
-#        log(passengerTicketStr)
+        log(passengerTicketStr)
 
         num = 0
         passengrStr_list = []
@@ -641,6 +654,7 @@ class Order(object):
         if html_checkorder['status'] == True:
             if html_checkorder['data']['submitStatus'] == True:
                 println('检查订单信息成功!')
+                time.sleep(int(html_checkorder['data']['ifShowPassCodeTime']) / float(1000))
             else:
                 println('检查订单信息失败：' + html_checkorder['data']['errMsg'])
         else:
@@ -696,16 +710,16 @@ class Order(object):
             'passengerTicketStr': passengerTicketStr,
             'oldPassengerStr': oldpassengerStr,
             'randCode': '',
+            'purpose_codes': purpose_codes,
             'key_check_isChange': key_check_isChange,
+            'leftTicketStr': leftTicket,
+            'train_location': train_location,
             'choose_seats': chooseSeatsStr,
             'seatDetailType': '000',
-            'leftTicketStr': leftTicket,
-            'purpose_codes': purpose_codes,
-            'train_location': train_location,
-            '_json_att': '',
             'whatsSelect': '1',
             'roomType': '00',
             'dwAll': 'N',
+            '_json_att': '',
             'REPEAT_SUBMIT_TOKEN': token
         }
         
@@ -750,6 +764,7 @@ class Order(object):
                         resDict.update({'status' : True})
                         resDict.update({'orderId' : html['data']['orderId']})
                         msg = '占座成功'
+                        break
                     elif waitTime == -100:
                         time.sleep(10)
                     elif waitTime < 0:
@@ -1243,6 +1258,7 @@ def order(bkInfo):
                     lock.release()
             except Exception as e:
                 log('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 本次下单异常...')
+                log(e)
 #                raise
                 if train_tip:  
                     println('小黑屋新增成员：['+ train_tip + ']')
