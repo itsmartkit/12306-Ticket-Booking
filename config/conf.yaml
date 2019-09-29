@@ -11,6 +11,9 @@ getip_url : 'http://www.itsmartkit.com/ip.php'
 server_ip : '39.95.20.xxx'
 server_port : 12306
 
+# 是否启用候补
+enable_hb : True
+
 # 自动识别验证码
 auto_captcha : True
 

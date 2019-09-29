@@ -789,7 +789,7 @@ class HBOrder(object):
         self.url_getSuccessRate = 'https://kyfw.12306.cn/otn/afterNate/getSuccessRate'
         self.url_submitOrderRequest = 'https://kyfw.12306.cn/otn/afterNate/submitOrderRequest'
         self.url_conf = 'https://kyfw.12306.cn/otn/login/conf'
-#        self.url_pass = 'https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs'
+        self.url_pass = 'https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs'
         self.url_passInitApi = 'https://kyfw.12306.cn/otn/afterNate/passengerInitApi'
         self.url_getQueueNum = 'https://kyfw.12306.cn/otn/afterNate/getQueueNum'
         self.url_confirmHB = 'https://kyfw.12306.cn/otn/afterNate/confirmHB'
@@ -845,7 +845,162 @@ class HBOrder(object):
         if len(secretList) == 0:
             resDict.update({'status' : False})
         resDict.update({'status' : msg})
+        resDict.update({'secretList' : secretList})
         return resDict
+    
+    
+    def submitOrderRequest(self, secretList):
+        '''提交候补订单'''
+        secretStr = ''.join(secretList)
+        form = {
+                'secretList' : secretStr,
+                '_json_att': ''
+            }
+        global req
+        json_res = req.post(self.url_submitOrderRequest, data=form, headers=self.head_1, verify=False).json()
+        if json_res['status']:
+            println('提交候补订单成功！')
+        else:
+            msg = '提交候补订单失败！' + json_res
+            if  'messages' in json_res:
+                    msg = msg + json_res['messages'][0]
+            println(msg)
+        return json_res['status'];
+    
+    
+    def initApi(self):
+        global req
+        flag = True
+        resDict = {'status' : True}
+        flag = self.viewUrl(self.url_conf)['status']
+        if flag:
+            pass_res = req.post(self.url_pass, headers=self.head_2, verify=False).json()
+            passengers = pass_res['data']['normal_passengers']
+            resDict.update({'pass' : passengers})
+            init_res = self.viewUrl(self.url_passInitApi)
+            if init_res['status']:
+                jzParam = init_res['data']['jzdhDateE'] + '#' +init_res['data']['jzdhHourE'].replace(':', '#')
+                resDict.update({'jzParam' : jzParam})
+                resDict.update({'hbTrainList' : init_res['data']['hbTrainList']})
+        resDict.update({'status' : flag})
+        return resDict
+    
+    
+    def getQueueNum(self):
+        '''获取排队序号'''
+        global req
+        json_res = req.post(self.url_getQueueNum, headers=self.head_2, verify=False).json()
+        if json_res['status'] and json_res['data']['flag']:
+            msg = '候补排队成功！'
+            for q in json_res['data']['queueNum']:
+                msg = msg + '车次[{}], 当前排在第{}位;'.format(q['station_train_code'], str(q['queue_num']))
+            println(msg)
+            return True
+        else:
+            println(json_res['messages'][0])
+            return False
+            
+    def confirmHB(self, passengers, hbTrainList, jzParam, bkInfo):
+        '''乘车人'''
+        passengers_name = ''
+        for name in bkInfo.passengers_name:
+            p_idx = 1
+            for p in passengers:
+#                            log(p)
+                if name == p['passenger_name']:
+                    passengers_name = passengers_name + str(p_idx) + ','
+                    break
+                else:
+                   p_idx += 1
+        passengers_name = passengers_name[:-1]
+        
+        pass_list = passengers_name.split(',')
+        pass_dict = []
+        for i in pass_list:
+            info = passengers[int(i) - 1]
+#            println(info)
+            pass_name = info['passenger_name']  # 名字
+            pass_id = info['passenger_id_no']  # 身份证号
+            pass_phone = info['mobile_no']  # 手机号码
+            all_enc_str = info['allEncStr']
+#            pass_type = info['passenger_type']  # 证件类型
+            pass_type = '1'  # 默认成人身份证
+            dict = {
+                'pass_name': pass_name,
+                'pass_id': pass_id,
+                'pass_phone': pass_phone,
+                'pass_type': pass_type,
+                'all_enc_str' : all_enc_str
+            }
+            pass_dict.append(dict)
+        
+        # 拼接passengerInfo
+        passengerInfo = ''
+        for p in pass_dict:
+            passengerInfo = passengerInfo + '1#{}#1#{}#{};'.format(p['pass_name'],p['pass_id'],p['all_enc_str'])
+        
+        hbTrain = ''
+        for hbt in hbTrainList:
+            hbTrain = hbTrain + hbt['train_no'] + ',' + hbt['seat_type_code'] + '#'
+            
+        form = {
+                'passengerInfo' : passengerInfo,
+                'jzParam' : jzParam,
+                'hbTrain' : hbTrain,
+                'lkParam' : ''
+            }
+        global req
+        json_res = req.post(self.url_confirmHB, data=form, headers=self.head_2, verify=False).json()
+        if json_res['status']:
+            println('确认候补订单成功！')
+        else:
+            println(json_res['messages'][0])
+        return json_res['status']
+    
+    def queryQueue(self):
+        global req
+        resDict = ({'status' : False})
+        msg = ''
+        try:
+            global req
+            n = 0
+            while n < 30:
+                n += 1
+                println('第[' + str(n) + ']次查询候补订单状态...')
+                html = req.post(self.url_queryQueue, headers=self.head_2, verify=False).json()
+#                println(html)
+                if html['status']:
+                    waitTime = html['data']['waitTime']
+                    if waitTime == -1:
+                        resDict.update({'status' : True})
+                        resDict.update({'orderId' : html['data']['orderId']})
+                        msg = '候补成功'
+                        break
+                    elif waitTime == -100:
+                        time.sleep(3)
+                    elif waitTime < 0:
+                        msg = html['data']['msg']
+                        break
+                    else:
+                        time.sleep(int(waitTime) + 1)
+                else:
+                    msg = html['data']['messages']
+        except Exception as ex:
+            log(ex)
+            msg = ex
+        resDict.update({'msg' : msg})
+        return resDict
+        
+    
+    def viewUrl(self, url):
+        global req
+        json_res = req.post(url, headers=self.head_2, verify=False).json()
+        if json_res['status']:
+            pass
+        else:
+            println(json_res['messages'][0])
+        return json_res
+        
     
 class Cancelorder(Login, Order):
     '''取消订单'''
@@ -1119,7 +1274,8 @@ def order(bkInfo):
                             cddt_seat_keys.append(k)
 #                            cddt_seat_types.update({ k : seat_type[cddt_seat] })
                             break
-                trains_idx = []   
+                trains_idx = []
+                hb_trains_idx = {}
                 temp_trains_idx = []
                 num = 1
                 for i in result:
@@ -1128,14 +1284,20 @@ def order(bkInfo):
                         pTxt = ''
                         for train in bkInfo.candidate_trains:
                             seat_flag = False
+                            hb_flag = False
+                            seat_type = ''
                             for sk in cddt_seat_keys:
+                                if info[38].find(seat_type[seat_dic[sk]]) < 0:
+                                    # 可以候补
+                                    seat_type = seat_type[seat_dic[sk]]
+                                    hb_flag = True
 #                                if info[sk] != '无' and info[sk] != '' and (info[38] == '' or str(info[38]).find(cddt_seat_types[sk]) < 0):
                                 if info[sk] != '无' and info[sk] != '':
 #                                    log(info[3] + info[sk])
                                     if info[sk] == '有' or int(info[sk]) >= len(bkInfo.passengers_name):
                                         seat_flag = True
                                     break
-                            if seat_flag:
+                            if seat_flag or (cfg['enable_hb'] and hb_flag):
                                 t_tip  = date + '-' + from_station + '-' + to_station + '-' + info[3]
                                 if t_tip in ticket_black_list:
                                     temp = '['+ t_tip +']属于小黑屋成员，小黑屋剩余停留时间：' + str(ticket_black_list[t_tip]) + 's'
@@ -1156,7 +1318,10 @@ def order(bkInfo):
                                     if (t3-t1) < ts or (departure and t5 > t1):
                                         continue
                                     if info[3] == train:
-                                        trains_idx.append(num)
+                                        if seat_flag:
+                                            trains_idx.append(num)
+                                        else:
+                                            hb_trains_idx.update({num, seat_type})
                                     else:
                                         # 出发时间和到达时间符合要求的也可
                                         if len(bkInfo.min_set_out_time) > 0 and len(bkInfo.max_arrival_time) > 0:
@@ -1166,11 +1331,14 @@ def order(bkInfo):
                                             t4 = int(mart[0]) * 60 + int(mart[1])
                                             # 保证在区间内
                                             if t1 >= t2 and t3 <= t4:
-                                                temp_trains_idx.append(num)
+                                                if seat_flag:
+                                                    temp_trains_idx.append(num)
+                                                else:
+                                                    hb_trains_idx.update({num, seat_type})                      
                     num += 1
                 if temp_trains_idx:
                     trains_idx.extend(temp_trains_idx)
-                if len(trains_idx) > 0:
+                if len(trains_idx) > 0 or (cfg['enable_hb'] and len(hb_trains_idx) > 0 ):
                     
                     lock.acquire()
 #                    if booking_now[bkInfo.group] > int(bkInfo.rank):
@@ -1203,6 +1371,47 @@ def order(bkInfo):
                         login.login(bkInfo.username, bkInfo.password, answer)
                         auth_res = order.auth()
                     dump(req,_path)
+                    
+                # 判断候补
+                hb_id = '{}-{}-{}-{}'.format(bkInfo.passengers_name, date, from_station, to_station)
+                if hb_id not in hb_finish_list and len(trains_idx) == 0 and cfg['enable_hb'] and len(hb_trains_idx) > 0:
+                    hb_trains = []
+                    hb_seats = []
+                    for hbt_idx in hb_trains_idx.keys():
+                        hb_trains.append(result[int(hbt_idx) - 1].split('|')[0])
+                        hb_seats.append(hb_trains_idx[hbt_idx])
+                    hbOrder = HBOrder()
+                    ckf_res = hbOrder.chechFace(hb_trains, hb_seats)
+                    if ckf_res['status']:
+                        submit_res = hbOrder.submitOrderRequest(ckf_res['secretList'])
+                        if submit_res['status']:
+                            init_res = hbOrder.initApi()
+                            if init_res['status'] and hbOrder.getQueueNum()['status']:
+                                confirm_res = hbOrder.confirmHB(init_res['pass'],init_res['hbTrainList'],init_res['jzParam'], bkInfo)
+                                if confirm_res['status']:
+                                    qq_res = hbOrder.queryQueue()
+                                    if qq_res['status']:
+                                        hb_finish_list.update({hb_id, True})
+                                        # 发送邮件通知
+                                        println('恭喜您，抢票成功！')
+                                        subject = '自助订票系统--订票成功通知'
+                                        success_info = '<div>主机[' + local_ip + ']通知：恭喜您，车票候补成功，请及时支付！</div><div style="color: #000000; padding-top: 5px; padding-bottom: 5px; font-weight: bold;"><div>订单信息如下：</div>'
+                                        success_info = success_info + bkInfo.passengers_name + ' ' + date + '，' + from_station + '-->' + to_station + '。</div>'
+                                        success_info = success_info + '<div><p>---------------------<br/>From: 12306 PABS<br/>' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '</p><div>'
+                                        email = SendEmail()
+                                        send_res = email.send(bkInfo.email, subject, success_info)
+                                        playaudio(cfg['finish_task_audio'], cfg['loop_play'])
+                                        if send_res == False:
+                                            playaudio(cfg['post_failed_audio'], cfg['loop_play'])
+                                            println('正在尝试使用邮件代理发送...')
+                                            cmdTxt = 'addmailtask:' + bkInfo.email + '|' + subject + '|' + success_info
+                                            try:
+                                                client.sendall(cmdTxt.encode(encoding))
+                                                bytes.decode(client.recv(1024), encoding)
+                                            except:
+                                                pass 
+                    else:
+                        println(ckf_res['msg'])
                 for train_idx in trains_idx:
                     t_no = result[int(train_idx) - 1].split('|')[3]
                     train_tip = date + '-' + from_station + '-' + to_station + '-' + t_no
@@ -1692,6 +1901,7 @@ global left_ticket_path
 cdn_list = []
 time_out_cdn = {}
 ticket_black_list = {}
+hb_finish_list = {}
 last_req_time = None
 lock = threading.Lock()
 
@@ -1706,6 +1916,7 @@ server_port = cfg['server_port']
 _path = cfg['req_cache_path']
 is_core = cfg['is_core']
 real_host = cfg['real_host']
+enable_hb = cfg['enable_hb']
 driver = None
 
 
