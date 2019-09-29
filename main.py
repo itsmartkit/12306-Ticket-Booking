@@ -499,9 +499,9 @@ class Order(object):
 #        log(html_order)
 #        println(req.cookies)
         if html_order['status'] == True:
-            println('尝试提交订单...')
+            println('提交订单成功！')
         else:
-            msg = '提交订单失败! '
+            msg = '提交订单失败！'
             if  'messages' in html_order:
                 msg = msg + html_order['messages'][0]
             println(msg)
@@ -779,6 +779,74 @@ class Order(object):
             msg = ex
         resDict.update({'msg' : msg})
         return resDict
+    
+    
+class HBOrder(object):
+    '''提交后补订单'''
+
+    def __init__(self):
+        self.url_chechFace = 'https://kyfw.12306.cn/otn/afterNate/chechFace'
+        self.url_getSuccessRate = 'https://kyfw.12306.cn/otn/afterNate/getSuccessRate'
+        self.url_submitOrderRequest = 'https://kyfw.12306.cn/otn/afterNate/submitOrderRequest'
+        self.url_conf = 'https://kyfw.12306.cn/otn/login/conf'
+#        self.url_pass = 'https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs'
+        self.url_passInitApi = 'https://kyfw.12306.cn/otn/afterNate/passengerInitApi'
+        self.url_getQueueNum = 'https://kyfw.12306.cn/otn/afterNate/getQueueNum'
+        self.url_confirmHB = 'https://kyfw.12306.cn/otn/afterNate/confirmHB'
+        self.url_queryQueue = 'https://kyfw.12306.cn/otn/afterNate/queryQueue'
+        
+
+        self.head_1 = {
+            'Host': 'kyfw.12306.cn',
+            'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+        }
+        self.head_2 = {
+            'Host': 'kyfw.12306.cn',
+            'Referer': 'https://kyfw.12306.cn/otn/view/lineUp_toPay.html',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36',
+        }
+    
+    def chechFace(self, secrets, seatTypes):
+        resDict = {'status' : True}
+        secretList = []
+        train_num = 2
+        msg = ''
+        for i in len(secrets):
+            # chechFace
+            secretStr = secrets[i] + '#' + seatTypes[i] +'|'
+            form = {
+                    'secretList' : secretStr,
+                    '_json_att': ''
+                }
+            global req
+            json_res = req.post(self.url_chechFace, data=form, headers=self.head_1, verify=False).json()
+            if json_res['status']:
+                if json_res['status']['data']['face_flag']:
+                    form_1 = {
+                            'successSecret' : secretStr,
+                            '_json_att': ''
+                        }
+                    rate_res = req.post(self.url_getSuccessRate, data=form_1, headers=self.head_1, verify=False).json()
+                    if rate_res['status']:
+                        if len(secretList) < train_num:
+                            secretList.append(secretStr)
+                            r_flag = rate_res['data']['flag'][0]
+                            msg = '{}: {}, {}; '.format(r_flag['start_train_date'],r_flag['train_no'], r_flag['info'])
+                        else:
+                            break  
+                    else:
+                        msg = rate_res['messages'][0]
+                else:
+                    resDict.update({'msg', json_res['messages'][0]})
+#        resDict.pop()
+            else:
+                msg = '备选车次席别提交的候补订单较多，可更换车次、席别或稍后重试'
+        if len(secretList) == 0:
+            resDict.update({'status' : False})
+        resDict.update({'status' : msg})
+        return resDict
+    
 class Cancelorder(Login, Order):
     '''取消订单'''
 
@@ -1605,6 +1673,13 @@ def kill_all_chromedriver():
         if p.name() == 'chromedriver.exe':
              os.popen('taskkill.exe /pid:' + str(pid))
 
+def get_index_page():
+    kill_all_chromedriver()
+    global driver
+    if driver == None:
+        driver = webdriver.Chrome(webdriver_path)
+    driver.get(cfg['index_page'])
+
 global booking_list
 global cddt_trains
 global thread_list
@@ -1636,10 +1711,6 @@ driver = None
 
 if __name__ == '__main__':
     try:
-        kill_all_chromedriver()
-        if driver == None:
-            driver = webdriver.Chrome(webdriver_path)
-        driver.get(cfg['index_page'])
         req = load_obj(_path)
         if req == None:
             req = requests.Session()
