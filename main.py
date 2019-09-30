@@ -812,7 +812,8 @@ class HBOrder(object):
         secretList = []
         train_num = 2
         msg = ''
-        for i in len(secrets):
+        i = 0
+        while i < len(secrets):
             # chechFace
             secretStr = secrets[i] + '#' + seatTypes[i] +'|'
             form = {
@@ -821,27 +822,33 @@ class HBOrder(object):
                 }
             global req
             json_res = req.post(self.url_chechFace, data=form, headers=self.head_1, verify=False).json()
+            println(json_res)
             if json_res['status']:
-                if json_res['status']['data']['face_flag']:
+                if json_res['status'] and json_res['data']['face_flag']:
                     form_1 = {
                             'successSecret' : secretStr,
                             '_json_att': ''
                         }
                     rate_res = req.post(self.url_getSuccessRate, data=form_1, headers=self.head_1, verify=False).json()
+                    println(secretStr)
+#                    println(rate_res)
                     if rate_res['status']:
-                        if len(secretList) < train_num:
-                            secretList.append(secretStr)
-                            r_flag = rate_res['data']['flag'][0]
-                            msg = '{}: {}, {}; '.format(r_flag['start_train_date'],r_flag['train_no'], r_flag['info'])
-                        else:
-                            break  
+                        if rate_res['data']['flag'] == '':
+                            msg = rate_res['data']['msg']
+                        else:   
+                            if len(secretList) < train_num:
+                                secretList.append(secretStr)
+                                r_flag = rate_res['data']['flag'][0]
+                                msg = '{}: {}, {}; '.format(r_flag['start_train_date'],r_flag['train_no'], r_flag['info'])
+                            else:
+                                break  
                     else:
                         msg = rate_res['messages'][0]
                 else:
-                    resDict.update({'msg', json_res['messages'][0]})
-#        resDict.pop()
+                    resDict.update({'msg' : json_res['messages'][0]})
             else:
                 msg = '备选车次席别提交的候补订单较多，可更换车次、席别或稍后重试'
+            i += 1
         if len(secretList) == 0:
             resDict.update({'status' : False})
         resDict.update({'status' : msg})
@@ -852,6 +859,7 @@ class HBOrder(object):
     def submitOrderRequest(self, secretList):
         '''提交候补订单'''
         secretStr = ''.join(secretList)
+        secretStr = secretStr[:-1]
         form = {
                 'secretList' : secretStr,
                 '_json_att': ''
@@ -861,7 +869,7 @@ class HBOrder(object):
         if json_res['status']:
             println('提交候补订单成功！')
         else:
-            msg = '提交候补订单失败！' + json_res
+            msg = '提交候补订单失败！'
             if  'messages' in json_res:
                     msg = msg + json_res['messages'][0]
             println(msg)
@@ -1285,11 +1293,11 @@ def order(bkInfo):
                         for train in bkInfo.candidate_trains:
                             seat_flag = False
                             hb_flag = False
-                            seat_type = ''
+                            seat_tp = ''
                             for sk in cddt_seat_keys:
                                 if info[38].find(seat_type[seat_dic[sk]]) < 0:
                                     # 可以候补
-                                    seat_type = seat_type[seat_dic[sk]]
+                                    seat_tp = seat_type[seat_dic[sk]]
                                     hb_flag = True
 #                                if info[sk] != '无' and info[sk] != '' and (info[38] == '' or str(info[38]).find(cddt_seat_types[sk]) < 0):
                                 if info[sk] != '无' and info[sk] != '':
@@ -1321,7 +1329,9 @@ def order(bkInfo):
                                         if seat_flag:
                                             trains_idx.append(num)
                                         else:
-                                            hb_trains_idx.update({num, seat_type})
+                                            print(num)
+                                            print(seat_tp)
+                                            hb_trains_idx.update({num : seat_tp})
                                     else:
                                         # 出发时间和到达时间符合要求的也可
                                         if len(bkInfo.min_set_out_time) > 0 and len(bkInfo.max_arrival_time) > 0:
@@ -1334,7 +1344,7 @@ def order(bkInfo):
                                                 if seat_flag:
                                                     temp_trains_idx.append(num)
                                                 else:
-                                                    hb_trains_idx.update({num, seat_type})                      
+                                                    hb_trains_idx.update({num : seat_tp})                      
                     num += 1
                 if temp_trains_idx:
                     trains_idx.extend(temp_trains_idx)
@@ -1384,14 +1394,14 @@ def order(bkInfo):
                     ckf_res = hbOrder.chechFace(hb_trains, hb_seats)
                     if ckf_res['status']:
                         submit_res = hbOrder.submitOrderRequest(ckf_res['secretList'])
-                        if submit_res['status']:
+                        if submit_res:
                             init_res = hbOrder.initApi()
                             if init_res['status'] and hbOrder.getQueueNum()['status']:
                                 confirm_res = hbOrder.confirmHB(init_res['pass'],init_res['hbTrainList'],init_res['jzParam'], bkInfo)
                                 if confirm_res['status']:
                                     qq_res = hbOrder.queryQueue()
                                     if qq_res['status']:
-                                        hb_finish_list.update({hb_id, True})
+                                        hb_finish_list.update({hb_id : True})
                                         # 发送邮件通知
                                         println('恭喜您，抢票成功！')
                                         subject = '自助订票系统--订票成功通知'
@@ -1529,7 +1539,7 @@ def order(bkInfo):
             except Exception as e:
                 log('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 本次下单异常...')
                 log(e)
-#                raise
+                raise
                 if train_tip:  
                     println('小黑屋新增成员：['+ train_tip + ']')
                     ticket_black_list.update({train_tip : ticket_black_list_time })
@@ -1549,7 +1559,7 @@ def run(bkInfo):
             order(bkInfo)
             flag = True
         except BaseException as ex:
-#            raise
+            raise
             log(ex)
             n += 1
             time.sleep(3)
