@@ -35,7 +35,6 @@ from selenium import webdriver
 import logging
 import pickle
 import yaml
-import time
 import getpass
 import demjson
 import psutil
@@ -297,18 +296,21 @@ class Login(object):
         self.url_login = 'https://kyfw.12306.cn/passport/web/login'
         self.url_captcha = 'http://littlebigluo.qicp.net:47720/'
         self.headers = {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'Referer': 'https://kyfw.12306.cn/otn/resources/login.html',
+            'Host':'kyfw.12306.cn',
             'Accept' : 'application/json, text/javascript, */*; q=0.01',
             'Origin':'https://kyfw.12306.cn',
-            'Host':'kyfw.12306.cn',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Referer': 'https://kyfw.12306.cn/otn/resources/login.html',
             'Accept-Encoding':'gzip, deflate, br',
-            'Accept-Language':'zh-CN,zh;q=0.9'
+            'Accept-Language':'zh-CN,zh;q=0.9',
         }
         
     def get_rail_deviceid(self):
         '''获取rail_deviceid'''
-#        global req
+        if cfg['enable_webdriver']:
+            return
+        global req
 #        # 减少请求次数，读取磁盘缓存
 #        algID_path = cfg['algID_cache_path']
 #        algID = None
@@ -322,15 +324,15 @@ class Login(object):
 #            html = requests.get('https://kyfw.12306.cn/otn/HttpZF/GetJS', headers=self.headers).text
 #            algID = re.search(r'algID\\x3d(.*?)\\x', html).group(1)
 #            dump(algID, algID_path)
-#        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=J3bG06RZnc&hashCode=-wxti33vNkVmnROAg6lZ6vxZ5KwK8sziRm7wW_JxUiI&FMQw=1&q4f3=zh-CN&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=382b3eb7cfc5d30f1b59cb283d1acaf3&lEnu=3232235885&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=Linux%20x86_64&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=1003x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(X11;%20Linux%20x86_64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/75.0.3770.142%20Safari/537.36&E3gR=7484b4d443309cac29a8c080495fc1c0&timestamp='
-#        html_rail_deviceid = req.get(url_rail_deviceid + str(int(time.time()*1000)),headers=self.headers).text
-#        callback = html_rail_deviceid.replace("callbackFunction('", '').replace("')", '')
-#        callback_json = json.loads(callback)
-#        rail_deviceid = callback_json['dfp']
-#        rail_expiration = callback_json['exp']
-##        println(rail_expiration)
-#        req.cookies['RAIL_DEVICEID'] = rail_deviceid
-#        req.cookies['RAIL_EXPIRATION'] = rail_expiration     
+        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=foiUJKaTni&hashCode=2Sg9KA5MMgmlG7tVI5bWe5PLMnb0bnIOjapoSCcoZu8&FMQw=1&q4f3=zh-CN&VySQ=FGFGiLEJQCz1Fj5hP76XtchhB59uzrmv&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=382b3eb7cfc5d30f1b59cb283d1acaf3&lEnu=3232261143&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=Linux%20x86_64&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=1003x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(X11;%20Linux%20x86_64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/75.0.3770.142%20Safari/537.36&E3gR=7484b4d443309cac29a8c080495fc1c0&timestamp='
+        html_rail_deviceid = req.get(url_rail_deviceid + str(int(time.time()*1000)),headers=self.headers).text
+        callback = html_rail_deviceid.replace("callbackFunction('", '').replace("')", '')
+        callback_json = json.loads(callback)
+        rail_deviceid = callback_json['dfp']
+        rail_expiration = callback_json['exp']
+#        println(rail_expiration)
+        req.cookies['RAIL_DEVICEID'] = rail_deviceid
+        req.cookies['RAIL_EXPIRATION'] = rail_expiration     
 
     def showimg(self):
         '''显示验证码图片'''
@@ -390,6 +392,7 @@ class Login(object):
             println('登录失败: response ' + str(resp.status_code))
             return
         if resp.headers['Content-Type'] == 'text/html':
+            time.sleep(3)
             println('登录失败，请稍后重试！')
             return
         resp = resp.json()
@@ -416,14 +419,26 @@ class Order(object):
         self.url_count = 'https://kyfw.12306.cn/otn/confirmPassenger/getQueueCount'
         self.url_query_waittime = 'https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime'
         self.head_1 = {
-            'Host': 'kyfw.12306.cn',
+            'Host':'kyfw.12306.cn',
+            'If-Modified-Since': '0',
+            'Origin':'https://kyfw.12306.cn',
+            'Accept-Encoding':'gzip, deflate, br',
+            'Accept-Language':'zh-CN,zh;q=0.9',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
             'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
         }
         self.head_2 = {
-            'Host': 'kyfw.12306.cn',
+            'Host':'kyfw.12306.cn',
+            'If-Modified-Since': '0',
+            'Origin':'https://kyfw.12306.cn',
+            'Accept-Encoding':'gzip, deflate, br',
+            'Accept-Language':'zh-CN,zh;q=0.9',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
             'Referer': 'https://kyfw.12306.cn/otn/confirmPassenger/initDc',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
         }
 
     def auth(self):
@@ -442,6 +457,7 @@ class Order(object):
             '_json_att':''
         }
         resp_uam = req.post(self.url_uam, data=form, headers=self.head_1, verify=False)
+#        print(resp_uam)
         if resp_uam.status_code != 200:
             println('验证uam失败: response ' + str(resp_uam.status_code))
             auth_res.update({'status': False})
@@ -797,14 +813,26 @@ class HBOrder(object):
         
 
         self.head_1 = {
-            'Host': 'kyfw.12306.cn',
+            'Host':'kyfw.12306.cn',
+            'If-Modified-Since': '0',
+            'Origin':'https://kyfw.12306.cn',
+            'Accept-Encoding':'gzip, deflate, br',
+            'Accept-Language':'zh-CN,zh;q=0.9',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
             'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
         }
         self.head_2 = {
-            'Host': 'kyfw.12306.cn',
+            'Host':'kyfw.12306.cn',
+            'If-Modified-Since': '0',
+            'Origin':'https://kyfw.12306.cn',
+            'Accept-Encoding':'gzip, deflate, br',
+            'Accept-Language':'zh-CN,zh;q=0.9',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
             'Referer': 'https://kyfw.12306.cn/otn/view/lineUp_toPay.html',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
         }
     
     def chechFace(self, secrets, seatTypes):
@@ -1122,16 +1150,22 @@ def pass_captcha():
     '''自动识别验证码'''
     println('正在识别验证码...')
     global req
-    url_pic = 'https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.15905700266966694'
+    url_pic = 'https://kyfw.12306.cn/passport/captcha/captcha-image64?login_site=E&module=login&rand=sjrand&0.15905700266966694'
     url_captcha = 'http://littlebigluo.qicp.net:47720/'
     headers = {
         'Host': 'kyfw.12306.cn',
         'Referer': 'https://kyfw.12306.cn/otn/resources/login.html',
         'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
     }
-    html_pic = req.get(url_pic, headers=headers, verify=False).content
-    base64_str = base64.b64encode(html_pic).decode()
+    res = req.get(url_pic, headers=headers, verify=False)
+    while res == None:
+        time.sleep(3)
+        res = req.get(url_pic, headers=headers, verify=False)
+    rep_json = res.json()
+    base64_str = rep_json['image']
 #    print(base64_str)
+    html_pic = base64.b64decode(base64_str)
+#    print(html_pic)
     open(captcha_path, 'wb').write(html_pic)
     
     # 采用本地识别算法
@@ -1329,8 +1363,8 @@ def order(bkInfo):
                                         if seat_flag:
                                             trains_idx.append(num)
                                         else:
-                                            print(num)
-                                            print(seat_tp)
+#                                            print(num)
+#                                            print(seat_tp)
                                             hb_trains_idx.update({num : seat_tp})
                                     else:
                                         # 出发时间和到达时间符合要求的也可
@@ -1939,6 +1973,8 @@ if __name__ == '__main__':
             login_sys()
         check_sleep_time('系统将在06:00以后继续抢票')
         get_left_ticket_path()
+        if cfg['enable_webdriver']:
+            get_index_page()
         log('*' * 30 + '12306自动抢票开始' + '*' * 30)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
