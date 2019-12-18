@@ -70,6 +70,8 @@ seat_dic = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '�
 
 webdriver_path = cfg['webdriver_path']
 
+user_agent = cfg['user_agent']
+
 def conversion_int(str):
     return int(str)
 
@@ -86,7 +88,7 @@ def log(msg):
 def getip():
     url = cfg['getip_url']
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+        'User-Agent': user_agent,
     }
     html = req.get(url, headers=headers, verify=False).content
     ip = re.findall(r'(?<![\.\d])(?:\d{1,3}\.){3}\d{1,3}(?![\.\d])', str(html))
@@ -108,7 +110,7 @@ class Leftquery(object):
             'If-Modified-Since': '0',
             'Pragma': 'no-cache',
             'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+            'User-Agent': user_agent,
             'X-Requested-With': 'XMLHttpRequest'
         }
         self.station_name_res = None
@@ -199,6 +201,8 @@ class Leftquery(object):
             if html == None:
                 return
 #            print(html)
+            req.cookies['_jc_save_fromStation'] = parse.quote(from_station + ','+ fromstation)
+            req.cookies['_jc_save_toStation'] = parse.quote(to_station + ','+ tostation)
             result = html['data']['result']
             if result == []:
                 println('很抱歉,没有查到符合当前条件的列车!')
@@ -299,7 +303,7 @@ class Login(object):
             'Host':'kyfw.12306.cn',
             'Accept' : 'application/json, text/javascript, */*; q=0.01',
             'Origin':'https://kyfw.12306.cn',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+            'User-Agent': user_agent,
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
             'Referer': 'https://kyfw.12306.cn/otn/resources/login.html',
             'Accept-Encoding':'gzip, deflate, br',
@@ -332,7 +336,7 @@ class Login(object):
         rail_expiration = callback_json['exp']
 #        println(rail_expiration)
         req.cookies['RAIL_DEVICEID'] = rail_deviceid
-        req.cookies['RAIL_EXPIRATION'] = rail_expiration     
+        req.cookies['RAIL_EXPIRATION'] = rail_expiration
 
     def showimg(self):
         '''显示验证码图片'''
@@ -392,8 +396,8 @@ class Login(object):
             println('登录失败: response ' + str(resp.status_code))
             return
         if resp.headers['Content-Type'] == 'text/html':
-            time.sleep(3)
             println('登录失败，请稍后重试！')
+            time.sleep(3)
             return
         resp = resp.json()
         if resp['result_code'] == 0:
@@ -427,18 +431,17 @@ class Order(object):
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
             'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+            'User-Agent': user_agent
         }
         self.head_2 = {
             'Host':'kyfw.12306.cn',
-            'If-Modified-Since': '0',
             'Origin':'https://kyfw.12306.cn',
             'Accept-Encoding':'gzip, deflate, br',
             'Accept-Language':'zh-CN,zh;q=0.9',
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
             'Referer': 'https://kyfw.12306.cn/otn/confirmPassenger/initDc',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+            'User-Agent': user_agent
         }
 
     def auth(self):
@@ -457,7 +460,9 @@ class Order(object):
             '_json_att':''
         }
         resp_uam = req.post(self.url_uam, data=form, headers=self.head_1, verify=False)
-#        print(resp_uam)
+        if resp_uam.headers['Content-Type'] != 'application/json;charset=UTF-8':
+            auth_res.update({'status': False})
+            return auth_res
         if resp_uam.status_code != 200:
             println('验证uam失败: response ' + str(resp_uam.status_code))
             auth_res.update({'status': False})
@@ -494,6 +499,17 @@ class Order(object):
         return auth_res
 #            exit()
 
+    def checkUser(self):
+        check_res = {'status': False}
+        form = {
+            '_json_att':''
+        }
+        global req
+        resp_checkuser = req.post(self.url_checkuser, data=form, headers=self.head_1, verify=False).json()
+        if resp_checkuser['status'] and resp_checkuser['data']['flag']:
+            check_res.update({'status': True})
+        return check_res
+
     def order(self, result, train_number, from_station, to_station, date):
         '''提交订单'''
         # 用户选择要购买的车次的序号
@@ -516,6 +532,8 @@ class Order(object):
 #        println(req.cookies)
         if html_order['status'] == True:
             println('提交订单成功！')
+            req.cookies['_jc_save_fromDate'] = date;
+            req.cookies['_jc_save_toDate'] = datetime.datetime.now().strftime('%Y-%m-%d')
         else:
             msg = '提交订单失败！'
             if  'messages' in html_order:
@@ -578,11 +596,13 @@ class Order(object):
         }
         global req
         # getPassCodeNew
+        html_pass = req.post(self.url_pass, data=form, headers=self.head_2, verify=False).json()
+        passengers = html_pass['data']['normal_passengers']
+        
         url = self.url_passcode.format(random.random())
         passCode = req.get(url, headers=self.head_2, verify=False).content
 #        print(passCode)
-        html_pass = req.post(self.url_pass, data=form, headers=self.head_2, verify=False).json()
-        passengers = html_pass['data']['normal_passengers']
+        
 #        println(req.cookies)
 #        print('\n')
 #        print('乘客信息列表:')
@@ -773,7 +793,7 @@ class Order(object):
                 println('第[' + str(n) + ']次查询订单状态...')
                 url = self.url_query_waittime + '?random={}&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN={}'.format(str(int(time.time()*1000)), token)
                 html = req.get(url, headers=self.head_2, verify=False).json()
-#                println(html)
+                println(html)
                 if html['status'] and html['data']['queryOrderWaitTimeStatus']:
                     waitTime = html['data']['waitTime']
                     if waitTime == -1:
@@ -801,6 +821,7 @@ class HBOrder(object):
     '''提交后补订单'''
 
     def __init__(self):
+        self.url_passcode = 'https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&{}'
         self.url_chechFace = 'https://kyfw.12306.cn/otn/afterNate/chechFace'
         self.url_getSuccessRate = 'https://kyfw.12306.cn/otn/afterNate/getSuccessRate'
         self.url_submitOrderRequest = 'https://kyfw.12306.cn/otn/afterNate/submitOrderRequest'
@@ -815,24 +836,29 @@ class HBOrder(object):
         self.head_1 = {
             'Host':'kyfw.12306.cn',
             'If-Modified-Since': '0',
+            'Cache-Control': 'no-cache',
             'Origin':'https://kyfw.12306.cn',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
             'Accept-Encoding':'gzip, deflate, br',
             'Accept-Language':'zh-CN,zh;q=0.9',
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
-            'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+            'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc&fs=%E5%8C%97%E4%BA%AC%E5%8D%97,VNP&ts=%E6%B5%8E%E5%8D%97%E8%A5%BF,JGK&date=2019-10-09&flag=N,N,Y',
+            'User-Agent': user_agent
         }
         self.head_2 = {
             'Host':'kyfw.12306.cn',
             'If-Modified-Since': '0',
             'Origin':'https://kyfw.12306.cn',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
             'Accept-Encoding':'gzip, deflate, br',
             'Accept-Language':'zh-CN,zh;q=0.9',
             'X-Requested-With': 'XMLHttpRequest',
             'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
             'Referer': 'https://kyfw.12306.cn/otn/view/lineUp_toPay.html',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+            'User-Agent': user_agent
         }
     
     def chechFace(self, secrets, seatTypes):
@@ -841,6 +867,9 @@ class HBOrder(object):
         train_num = 2
         msg = ''
         i = 0
+        global req 
+#        url = self.url_passcode.format(random.random())
+#        req.get(url, headers=self.head_1, verify=False).content
         while i < len(secrets):
             # chechFace
             secretStr = secrets[i] + '#' + seatTypes[i] +'|'
@@ -848,9 +877,8 @@ class HBOrder(object):
                     'secretList' : secretStr,
                     '_json_att': ''
                 }
-            global req
             json_res = req.post(self.url_chechFace, data=form, headers=self.head_1, verify=False).json()
-            println(json_res)
+#            println(json_res)
             if json_res['status']:
                 if json_res['status'] and json_res['data']['face_flag']:
                     form_1 = {
@@ -858,7 +886,7 @@ class HBOrder(object):
                             '_json_att': ''
                         }
                     rate_res = req.post(self.url_getSuccessRate, data=form_1, headers=self.head_1, verify=False).json()
-                    println(secretStr)
+#                    println(secretStr)
 #                    println(rate_res)
                     if rate_res['status']:
                         if rate_res['data']['flag'] == '':
@@ -1049,7 +1077,7 @@ class Cancelorder(Login, Order):
         self.head_cancel = {
             'Host': 'kyfw.12306.cn',
             'Referer': 'https://kyfw.12306.cn/otn/queryOrder/initNoComplete',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+            'User-Agent': user_agent,
         }
 
     def orderinfo(self):
@@ -1155,7 +1183,7 @@ def pass_captcha():
     headers = {
         'Host': 'kyfw.12306.cn',
         'Referer': 'https://kyfw.12306.cn/otn/resources/login.html',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+        'User-Agent': user_agent,
     }
     res = req.get(url_pic, headers=headers, verify=False)
     while res == None:
@@ -1179,7 +1207,7 @@ def pass_captcha():
     headers = {
         'Referer': url_captcha,
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+        'User-Agent': user_agent
     }
     try:
         return pass_captcha_360(base64_str)
@@ -1199,12 +1227,12 @@ def pass_captcha_360(img_buf):
     headers1 = {
         'Content-Type': 'application/json',
         'Referer': 'http://60.205.200.159/',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+        'User-Agent': user_agent
     }
     headers2 = {
         'Referer': 'https://pc.huochepiao.360.cn/',
         'Upgrade-Insecure-Requests': '1',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+        'User-Agent': user_agent
     }
     form1 = {
         'base64': img_buf,
@@ -1394,6 +1422,9 @@ def order(bkInfo):
                     order = Order()
                     auth_res = order.auth()
                     while auth_res['status'] != True or auth_res['realname'] != bkInfo.realname:
+                        if 'realname' in auth_res and auth_res['realname'] != bkInfo.realname:
+                            log('登录账号用户姓名与配置文件不一致，请检查！')
+                            break
                         if auth_res['status'] == True:
                             # 先退出当前登录账号
                             url_logout = 'https://kyfw.12306.cn/otn/login/loginOut'
@@ -1910,7 +1941,7 @@ def get_left_ticket_path():
     init_url = 'https://kyfw.12306.cn/otn/leftTicket/init'
     headers = {
         'Host': 'kyfw.12306.cn',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
+        'User-Agent': user_agent
     }
     html = req.get(init_url, headers=headers, verify=False).text
     ltp = re.findall(r'var CLeftTicketUrl = \'(.*?)\';', str(html))
