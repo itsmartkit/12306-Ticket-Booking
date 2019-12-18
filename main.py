@@ -1894,7 +1894,7 @@ def check_sleep_time(msg):
 
     while is_check_sleep_time and True:
         now = datetime.datetime.now()
-        if now.hour > 22 or now.hour < 6:
+        if (now.hour > 23 and now.minute > 30) or now.hour < 6:
             print('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 当前时间处于12306网站维护时段，{}...'.format(msg))
             time.sleep((60 - now.minute) * 60 - now.second + 5)
         else:
