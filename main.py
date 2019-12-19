@@ -774,7 +774,7 @@ class Order(object):
             'key_check_isChange': key_check_isChange,
             'leftTicketStr': leftTicket,
             'train_location': train_location,
-            'choose_seats': '',
+            'choose_seats': chooseSeatsStr,
             'seatDetailType': '000',
             'whatsSelect': '1',
             'roomType': '00',
