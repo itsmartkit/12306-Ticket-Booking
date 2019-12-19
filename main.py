@@ -31,6 +31,7 @@ from utils.httpUtils import HTTPClient
 from utils.sendEmail import SendEmail
 from captcha.captcha import Captcha
 from selenium import webdriver
+from config import urlConf
 
 import logging
 import pickle
@@ -56,6 +57,9 @@ logger.addHandler(fh)
 
 urllib3.disable_warnings() #不显示警告信息
 ssl._create_default_https_context = ssl._create_unverified_context
+
+httpClient = HTTPClient(0, 0)
+
 req = requests.Session()
 
 is_check_sleep_time = cfg['check_sleep_time']
@@ -104,6 +108,7 @@ class Leftquery(object):
     '''余票查询'''
 #    global station_name_res
     def __init__(self):
+        self.urls = urlConf.urls
         self.station_url = 'https://kyfw.12306.cn/otn/resources/js/framework/station_name.js'
         self.headers = {
             'Host': 'kyfw.12306.cn',
@@ -137,7 +142,15 @@ class Leftquery(object):
 
     def query_by_requests(self, url):
         html = None
-        q_res = req.get(url, headers=self.headers, timeout=3, verify=False)
+        _urls = {
+            "req_url": url,
+            "req_type": "post",
+            "Referer": "https://kyfw.12306.cn/otn/leftTicket/init",
+            "Host": "kyfw.12306.cn",
+            "is_logger": True,
+            "is_json": True,
+        }
+        q_res = httpClient.send(_urls)
         if q_res.status_code != 200:
             print(q_res.status_code)
             if q_res.status_code == 302:
@@ -160,7 +173,8 @@ class Leftquery(object):
 #                driver.execute_script(js)
                 for cookie in driver.get_cookies():
                     if cookie['name'] == 'RAIL_EXPIRATION' or cookie['name'] == 'RAIL_DEVICEID':
-                        req.cookies[cookie['name']] = cookie['value']
+#                        req.cookies[cookie['name']] = cookie['value']
+                        httpClient.set_cookie(cookie['name'], cookie['value'])
 #                print(driver.page_source)
                 html = demjson.decode(driver.find_element_by_tag_name('pre').text)
                 
@@ -295,6 +309,7 @@ class Login(object):
     def __init__(self):
 #        self.username = username
 #        self.password = password
+        self.urls = urlConf.urls
         self.url_pic = 'https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.15905700266966694'
         self.url_check = 'https://kyfw.12306.cn/passport/captcha/captcha-check'
         self.url_login = 'https://kyfw.12306.cn/passport/web/login'
@@ -373,7 +388,8 @@ class Login(object):
             '_': str(int(time.time() * 1000))
         }
         global req
-        html_check = req.get(self.url_check, params=form_check, headers=self.headers).json()
+        html_check = httpClient.send(self.urls['codeCheck'], params=form_check, headers=self.headers)
+        html_check = demjson.decode(html_check)
 #        println(html_check)
         if html_check['result_code'] == '4':
             println('验证码校验成功!')
@@ -391,15 +407,16 @@ class Login(object):
             'answer':answer
         }
         global req
-        resp = req.post(self.url_login, data=form_login, headers=self.headers, verify=False)
-        if resp.status_code != 200:
-            println('登录失败: response ' + str(resp.status_code))
-            return
-        if resp.headers['Content-Type'] == 'text/html':
-            println('登录失败，请稍后重试！')
-            time.sleep(3)
-            return
-        resp = resp.json()
+#        resp = req.post(self.url_login, data=form_login, headers=self.headers, verify=False)
+        resp = httpClient.send(self.urls['login'], form_login)
+#        if resp.status_code != 200:
+#            println('登录失败: response ' + str(resp.status_code))
+#            return
+#        if resp.headers['Content-Type'] == 'text/html':
+#            println('登录失败，请稍后重试！')
+#            time.sleep(3)
+#            return
+#        resp = demjson.decode(resp)
         if resp['result_code'] == 0:
             println('恭喜您, 登录成功!')
         else:
@@ -411,6 +428,7 @@ class Order(object):
     '''提交订单'''
 
     def __init__(self):
+        self.urls = urlConf.urls
         self.url_uam = 'https://kyfw.12306.cn/passport/web/auth/uamtk'
         self.url_uamclient = 'https://kyfw.12306.cn/otn/uamauthclient'
         self.url_checkuser = 'https://kyfw.12306.cn/otn/login/checkUser'
@@ -459,15 +477,22 @@ class Order(object):
             'appid': 'otn',
             '_json_att':''
         }
-        resp_uam = req.post(self.url_uam, data=form, headers=self.head_1, verify=False)
-        if resp_uam.headers['Content-Type'] != 'application/json;charset=UTF-8':
+#        form = {
+#            'appid': 'otn'
+#        }
+        html_uam = httpClient.send(self.urls['uamtk-static'], data=form)
+#        if resp_uam.headers['Content-Type'] != 'application/json;charset=UTF-8':
+#            auth_res.update({'status': False})
+#            return auth_res
+#        if resp_uam.status_code != 200:
+#            println('验证uam失败: response ' + str(resp_uam.status_code))
+#            auth_res.update({'status': False})
+#            return auth_res
+#        html_uam = json.loads(resp_uam)
+        if 'code' in html_uam and html_uam['code'] == 99999:
+            println(html_uam['message'])
             auth_res.update({'status': False})
             return auth_res
-        if resp_uam.status_code != 200:
-            println('验证uam失败: response ' + str(resp_uam.status_code))
-            auth_res.update({'status': False})
-            return auth_res
-        html_uam = resp_uam.json()
         if html_uam['result_code'] == 0:
             println('恭喜您,uam验证成功!')
             auth_res.update({'status': True})
@@ -486,7 +511,7 @@ class Order(object):
             'tk': tk,
              '_json_att':''
         }
-        html_uamclient = req.post(self.url_uamclient, data=form, headers=self.head_1, verify=False).json()
+        html_uamclient = httpClient.send(self.urls['uamauthclient'], data=form)
 #        println(html_uamclient)
         if html_uamclient['result_code'] == 0:
             println('恭喜您,uamclient验证成功!')
@@ -505,7 +530,7 @@ class Order(object):
             '_json_att':''
         }
         global req
-        resp_checkuser = req.post(self.url_checkuser, data=form, headers=self.head_1, verify=False).json()
+        resp_checkuser =  httpClient.send(self.urls['check_user_url'], data=form)
         if resp_checkuser['status'] and resp_checkuser['data']['flag']:
             check_res.update({'status': True})
         return check_res
@@ -527,7 +552,7 @@ class Order(object):
             'undefined': ''  # 固定的
         }
         global req
-        html_order = req.post(self.url_order, data=form, headers=self.head_1, verify=False).json()
+        html_order = httpClient.send(self.urls['submit_station_url'], data=form)
 #        log(html_order)
 #        println(req.cookies)
         if html_order['status'] == True:
@@ -548,7 +573,7 @@ class Order(object):
             '_json_att': ''
         }
         global req
-        html_token = req.post(self.url_token, data=form, headers=self.head_1, verify=False).text
+        html_token = httpClient.send(self.urls['initdc_url'], data=form)
         token = re.findall(r"var globalRepeatSubmitToken = '(.*?)';", html_token)[0]
         leftTicket = re.findall(r"'leftTicketStr':'(.*?)',", html_token)[0]
         key_check_isChange = re.findall(r"'key_check_isChange':'(.*?)',", html_token)[0]
@@ -587,20 +612,19 @@ class Order(object):
         println(priceInfo)
         return train_date, train_no, stationTrainCode, fromStationTelecode, toStationTelecode, leftTicket, purpose_codes, train_location, token, key_check_isChange
 
-    def passengers(self, token):
+    def passengers(self):
         '''打印乘客信息'''
         # 确认乘客信息
         form = {
-            '_json_att': '',
-            'REPEAT_SUBMIT_TOKEN': token
+            '_json_att': ''
         }
         global req
         # getPassCodeNew
-        html_pass = req.post(self.url_pass, data=form, headers=self.head_2, verify=False).json()
+        html_pass = httpClient.send(self.urls['get_passengerDTOs'], data=form)
         passengers = html_pass['data']['normal_passengers']
+#        url = self.url_passcode.format(random.random())
+#        passCode = httpClient.send(self.urls['codeImgByOrder'])
         
-        url = self.url_passcode.format(random.random())
-        passCode = req.get(url, headers=self.head_2, verify=False).content
 #        print(passCode)
         
 #        println(req.cookies)
@@ -685,7 +709,7 @@ class Order(object):
             'REPEAT_SUBMIT_TOKEN': token
         }
         global req
-        html_checkorder = req.post(self.url_checkorder, data=form, headers=self.head_2, verify=False).json()
+        html_checkorder = httpClient.send(self.urls['checkOrderInfoUrl'], data=form)
 #        println(html_checkorder)
         if html_checkorder['status'] == True:
             if html_checkorder['data']['submitStatus'] == True:
@@ -716,7 +740,7 @@ class Order(object):
             'REPEAT_SUBMIT_TOKEN': token
         }
         global req
-        html_count = req.post(self.url_count, data=form, headers=self.head_2, verify=False).json()
+        html_count = httpClient.send(self.urls['getQueueCountUrl'], data=form)
 #        println(html_count)
         if html_count['status'] == True:
 #            println('查询余票数量成功!')
@@ -750,7 +774,7 @@ class Order(object):
             'key_check_isChange': key_check_isChange,
             'leftTicketStr': leftTicket,
             'train_location': train_location,
-            'choose_seats': chooseSeatsStr,
+            'choose_seats': '',
             'seatDetailType': '000',
             'whatsSelect': '1',
             'roomType': '00',
@@ -762,7 +786,7 @@ class Order(object):
 #        if len(chooseSeatsStr) == 0:
 #            form.pop(choose_seats)
         global req
-        html_confirm = req.post(self.url_confirm, data=form, headers=self.head_2, verify=False).json()
+        html_confirm = httpClient.send(self.urls['checkQueueOrderUrl'], data=form)
 #        println(html_confirm)
         #  {'validateMessagesShowId': '_validatorMessage', 'status': True, 'httpstatus': 200, 'data': {'errMsg': '余票不足！', 'submitStatus': False}
         resDict = {}
@@ -791,8 +815,8 @@ class Order(object):
             while n < 30:
                 n += 1
                 println('第[' + str(n) + ']次查询订单状态...')
-                url = self.url_query_waittime + '?random={}&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN={}'.format(str(int(time.time()*1000)), token)
-                html = req.get(url, headers=self.head_2, verify=False).json()
+#                url = self.url_query_waittime + '?random={}&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN={}'.format(str(int(time.time()*1000)), token)
+                html = httpClient.send(self.urls['queryOrderWaitTimeUrl'])
                 println(html)
                 if html['status'] and html['data']['queryOrderWaitTimeStatus']:
                     waitTime = html['data']['waitTime']
@@ -807,7 +831,7 @@ class Order(object):
                         msg = html['data']['msg']
                         break
                     else:
-                        time.sleep(int(waitTime))
+                        time.sleep(2)
                 else:
                     msg = html['data']['messages']
         except Exception as ex:
@@ -821,6 +845,7 @@ class HBOrder(object):
     '''提交后补订单'''
 
     def __init__(self):
+        self.urls = urlConf.urls
         self.url_passcode = 'https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&{}'
         self.url_chechFace = 'https://kyfw.12306.cn/otn/afterNate/chechFace'
         self.url_getSuccessRate = 'https://kyfw.12306.cn/otn/afterNate/getSuccessRate'
@@ -1178,18 +1203,18 @@ def pass_captcha():
     '''自动识别验证码'''
     println('正在识别验证码...')
     global req
-    url_pic = 'https://kyfw.12306.cn/passport/captcha/captcha-image64?login_site=E&module=login&rand=sjrand&0.15905700266966694'
+#    url_pic = 'https://kyfw.12306.cn/passport/captcha/captcha-image64?login_site=E&module=login&rand=sjrand&0.15905700266966694'
     url_captcha = 'http://littlebigluo.qicp.net:47720/'
-    headers = {
-        'Host': 'kyfw.12306.cn',
-        'Referer': 'https://kyfw.12306.cn/otn/resources/login.html',
-        'User-Agent': user_agent,
-    }
-    res = req.get(url_pic, headers=headers, verify=False)
-    while res == None:
+#    headers = {
+#        'Host': 'kyfw.12306.cn',
+#        'Referer': 'https://kyfw.12306.cn/otn/resources/login.html',
+#        'User-Agent': user_agent,
+#    }
+#    res = req.get(url_pic, headers=headers, verify=False)
+    rep_json = httpClient.send(urlConf.urls['getCodeImg1'])
+    while rep_json == None:
         time.sleep(3)
-        res = req.get(url_pic, headers=headers, verify=False)
-    rep_json = res.json()
+        rep_json = httpClient.send(urlConf.urls['getCodeImg1'])
     base64_str = rep_json['image']
 #    print(base64_str)
     html_pic = base64.b64decode(base64_str)
@@ -1497,6 +1522,8 @@ def order(bkInfo):
                     println('正在抢 ' + date + '：[' + t_no + ']次 ' + from_station + '--->' + to_station)
                     train_number = train_idx
                     # 提交订单
+                    passengers = order.passengers()  # 打印乘客信息
+                    c_res = order.checkUser()
                     o_res = order.order(result, train_number, from_station, to_station, date)
                     if o_res['status'] is not True and 'messages' in o_res:
                         if o_res['messages'][0].find('有未处理的订单') > -1 or o_res['messages'][0].find('未完成订单') > -1  or o_res['messages'][0].find('行程冲突') > -1 :
@@ -1520,8 +1547,6 @@ def order(bkInfo):
                             break
                     # 检查订单
                     content = order.price()  # 打印出票价信息
-                    passengers = order.passengers(content[8])  # 打印乘客信息
-#                    print('乘客信息打印完毕')
                     # 选择乘客和座位
                     '''乘车人'''
                     passengers_name = ''
@@ -1567,6 +1592,10 @@ def order(bkInfo):
                             if res['status'] != True:
                                 println(res['msg'])
                                 res.update({'msg' : res['msg']})
+                            if 'code' in res and res['code'] == 99999:
+                                res['status'] = False
+                                res.update({'msg' : res['message']})
+                                continue
                             if res['msg'].find('余票不足') > -1 or res['msg'].find('没有足够的票') > -1:
                                 println('[' + seat + ']下单异常：余票不足！')
                                 res['status'] = False
@@ -1823,7 +1852,7 @@ def task():
 
 def cdn_req(cdn):
     for i in range(len(cdn) - 1):
-        http = HTTPClient(0)
+        http = HTTPClient(0, 0)
         urls = {
             'req_url': '/otn/login/init',
             'req_type': 'get',
