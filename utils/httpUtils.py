@@ -126,7 +126,7 @@ class HTTPClient(object):
     @cdn.setter
     def cdn(self, cdn):
         self._cdn = cdn
-
+        
     def send(self, urls, data=None, **kwargs):
         """send request to url.If response 200,return response, else return None."""
         allow_redirects = False
@@ -137,6 +137,7 @@ class HTTPClient(object):
         s_time = urls.get("s_time", 0)
         is_cdn = urls.get("is_cdn", False)
         is_test_cdn = urls.get("is_test_cdn", False)
+        is_full_url = urls.get("is_full_url", False)
         error_data = {"code": 99999, "message": u"重试次数达到上限"}
         if data:
             method = "post"
@@ -162,7 +163,12 @@ class HTTPClient(object):
         else:
             url_host = urls["Host"]
         http = urls.get("httpType") or "https"
-        for i in range(re_try):
+        _url = http + "://" + url_host + req_url
+        if is_full_url:
+            _url = req_url
+        i = 0;
+        while(i < int(re_try) + 1):
+            i = i + 1
             try:
                 # sleep(urls["s_time"]) if "s_time" in urls else sleep(0.001)
                 sleep(s_time)
@@ -173,7 +179,7 @@ class HTTPClient(object):
                 response = self._s.request(method=method,
                                            timeout=5,
                                            proxies=self._proxies,
-                                           url=http + "://" + url_host + req_url,
+                                           url=_url,
                                            data=data,
                                            allow_redirects=allow_redirects,
                                            verify=False,

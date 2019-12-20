@@ -68,6 +68,8 @@ encoding = cfg['encoding']
 
 captcha_path = cfg['captcha_path']
 
+deviceid_cache_path = cfg['deviceid_cache_path']
+
 seat_type = {'无座': '1', '硬座': '1', '硬卧': '3', '二等卧': 'J','软卧': '4','一等卧': 'I', '高级软卧': '6', '动卧': 'F', '二等座': 'O', '一等座': 'M', '商务座': '9'}
 
 seat_dic = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座', 33: '动卧'}
@@ -141,22 +143,16 @@ class Leftquery(object):
         return dict[station]
 
     def query_by_requests(self, url):
-        html = None
         _urls = {
             "req_url": url,
             "req_type": "post",
             "Referer": "https://kyfw.12306.cn/otn/leftTicket/init",
             "Host": "kyfw.12306.cn",
-            "is_logger": True,
+            "is_logger": False,
             "is_json": True,
+            "is_full_url": True,
         }
-        q_res = httpClient.send(_urls)
-        if q_res.status_code != 200:
-            print(q_res.status_code)
-            if q_res.status_code == 302:
-                get_left_ticket_path();
-            return html
-        html = q_res.json()
+        html = httpClient.send(_urls)
         return html
         
     def query_by_webdriver(self, url):
@@ -180,6 +176,7 @@ class Leftquery(object):
                 
                 #print('chrome')
             except BaseException as e:
+                driver.get(cfg['index_page'])
                 log(e)
             finally:
 #                driver.close()
@@ -208,15 +205,15 @@ class Leftquery(object):
         try:
 #            proxie = "{'http': 'http://127.0.0.1:8580'}"
             html = None
-            if cfg['enable_webdriver'] and n == 1:
+            if cfg['enable_webdriver'] and n == -1:
                 html = self.query_by_webdriver(url)
             else:
                 html = self.query_by_requests(url)
             if html == None:
                 return
 #            print(html)
-            req.cookies['_jc_save_fromStation'] = parse.quote(from_station + ','+ fromstation)
-            req.cookies['_jc_save_toStation'] = parse.quote(to_station + ','+ tostation)
+#            req.cookies['_jc_save_fromStation'] = parse.quote(from_station + ','+ fromstation)
+#            req.cookies['_jc_save_toStation'] = parse.quote(to_station + ','+ tostation)
             result = html['data']['result']
             if result == []:
                 println('很抱歉,没有查到符合当前条件的列车!')
@@ -310,10 +307,6 @@ class Login(object):
 #        self.username = username
 #        self.password = password
         self.urls = urlConf.urls
-        self.url_pic = 'https://kyfw.12306.cn/passport/captcha/captcha-image?login_site=E&module=login&rand=sjrand&0.15905700266966694'
-        self.url_check = 'https://kyfw.12306.cn/passport/captcha/captcha-check'
-        self.url_login = 'https://kyfw.12306.cn/passport/web/login'
-        self.url_captcha = 'http://littlebigluo.qicp.net:47720/'
         self.headers = {
             'Host':'kyfw.12306.cn',
             'Accept' : 'application/json, text/javascript, */*; q=0.01',
@@ -387,11 +380,15 @@ class Login(object):
             'rand': 'sjrand',
             '_': str(int(time.time() * 1000))
         }
-        global req
         html_check = httpClient.send(self.urls['codeCheck'], params=form_check, headers=self.headers)
-        html_check = demjson.decode(html_check)
+        try:
+            html_check = demjson.decode(html_check)
+        except:
+            println('验证码校验失败!')
+            println(html_check)
+            exit()
 #        println(html_check)
-        if html_check['result_code'] == '4':
+        if 'result_code' in html_check and html_check['result_code'] == '4':
             println('验证码校验成功!')
             return answer
         else:
@@ -417,7 +414,7 @@ class Login(object):
 #            time.sleep(3)
 #            return
 #        resp = demjson.decode(resp)
-        if resp['result_code'] == 0:
+        if 'result_code' in resp and resp['result_code'] == 0:
             println('恭喜您, 登录成功!')
         else:
             println('账号、密码或验证码错误, 登录失败!')
@@ -429,38 +426,6 @@ class Order(object):
 
     def __init__(self):
         self.urls = urlConf.urls
-        self.url_uam = 'https://kyfw.12306.cn/passport/web/auth/uamtk'
-        self.url_uamclient = 'https://kyfw.12306.cn/otn/uamauthclient'
-        self.url_checkuser = 'https://kyfw.12306.cn/otn/login/checkUser'
-        self.url_order = 'https://kyfw.12306.cn/otn/leftTicket/submitOrderRequest'
-        self.url_token = 'https://kyfw.12306.cn/otn/confirmPassenger/initDc'
-        self.url_passcode = 'https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&{}'
-        self.url_pass = 'https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs'
-        self.url_confirm = 'https://kyfw.12306.cn/otn/confirmPassenger/confirmSingleForQueue'
-        self.url_checkorder = 'https://kyfw.12306.cn/otn/confirmPassenger/checkOrderInfo'
-        self.url_count = 'https://kyfw.12306.cn/otn/confirmPassenger/getQueueCount'
-        self.url_query_waittime = 'https://kyfw.12306.cn/otn/confirmPassenger/queryOrderWaitTime'
-        self.head_1 = {
-            'Host':'kyfw.12306.cn',
-            'If-Modified-Since': '0',
-            'Origin':'https://kyfw.12306.cn',
-            'Accept-Encoding':'gzip, deflate, br',
-            'Accept-Language':'zh-CN,zh;q=0.9',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
-            'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init',
-            'User-Agent': user_agent
-        }
-        self.head_2 = {
-            'Host':'kyfw.12306.cn',
-            'Origin':'https://kyfw.12306.cn',
-            'Accept-Encoding':'gzip, deflate, br',
-            'Accept-Language':'zh-CN,zh;q=0.9',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
-            'Referer': 'https://kyfw.12306.cn/otn/confirmPassenger/initDc',
-            'User-Agent': user_agent
-        }
 
     def auth(self):
         auth_res = {'status': True}
@@ -513,7 +478,7 @@ class Order(object):
         }
         html_uamclient = httpClient.send(self.urls['uamauthclient'], data=form)
 #        println(html_uamclient)
-        if html_uamclient['result_code'] == 0:
+        if html_uamclient !=None and html_uamclient['result_code'] == 0:
             println('恭喜您,uamclient验证成功!')
             auth_res.update({'status': True})
             auth_res.update({'realname': html_uamclient['username']})
@@ -614,27 +579,7 @@ class Order(object):
 
     def passengers(self):
         '''打印乘客信息'''
-        # 确认乘客信息
-        form = {
-            '_json_att': ''
-        }
-        global req
-        # getPassCodeNew
-        html_pass = httpClient.send(self.urls['get_passengerDTOs'], data=form)
-        passengers = html_pass['data']['normal_passengers']
-#        url = self.url_passcode.format(random.random())
-#        passCode = httpClient.send(self.urls['codeImgByOrder'])
-        
-#        print(passCode)
-        
-#        println(req.cookies)
-#        print('\n')
-#        print('乘客信息列表:')
-#        for i in passengers:
-#            println(i)
-#            print(str(int(i['index_id']) + 1) + '号:' + i['passenger_name'] + ' ', end='')
-#        print('\n')
-        return passengers
+        return getPassengers()
 
     def chooseseat(self, passengers, passengers_name, stationTrainCode, cddt_seat, token):
         '''选择乘客和座位'''
@@ -673,7 +618,7 @@ class Order(object):
             passengerTicketStr += TicketStr + '_'
 
         passengerTicketStr = passengerTicketStr[:-1]
-        log(passengerTicketStr)
+#        log(passengerTicketStr)
 
         num = 0
         passengrStr_list = []
@@ -695,7 +640,7 @@ class Order(object):
         oldpassengerStr = ''.join(passengrStr_list)
         if num > 1:
             oldpassengerStr = oldpassengerStr + '_' 
-        println(oldpassengerStr)
+#        println(oldpassengerStr)
         
         form = {
             'cancel_flag': '2',
@@ -762,8 +707,6 @@ class Order(object):
         num = 0
         chooseSeatsStr = ''
         for code in choose_seats:
-            if(num != 0):
-                chooseSeatsStr = chooseSeatsStr + ','
             num += 1
             chooseSeatsStr = chooseSeatsStr + str(num) + code
         form = {
@@ -817,7 +760,7 @@ class Order(object):
                 println('第[' + str(n) + ']次查询订单状态...')
 #                url = self.url_query_waittime + '?random={}&tourFlag=dc&_json_att=&REPEAT_SUBMIT_TOKEN={}'.format(str(int(time.time()*1000)), token)
                 html = httpClient.send(self.urls['queryOrderWaitTimeUrl'])
-                println(html)
+#                println(html)
                 if html['status'] and html['data']['queryOrderWaitTimeStatus']:
                     waitTime = html['data']['waitTime']
                     if waitTime == -1:
@@ -831,7 +774,7 @@ class Order(object):
                         msg = html['data']['msg']
                         break
                     else:
-                        time.sleep(2)
+                        time.sleep(int(waitTime))
                 else:
                     msg = html['data']['messages']
         except Exception as ex:
@@ -892,7 +835,6 @@ class HBOrder(object):
         train_num = 2
         msg = ''
         i = 0
-        global req 
 #        url = self.url_passcode.format(random.random())
 #        req.get(url, headers=self.head_1, verify=False).content
         while i < len(secrets):
@@ -902,15 +844,15 @@ class HBOrder(object):
                     'secretList' : secretStr,
                     '_json_att': ''
                 }
-            json_res = req.post(self.url_chechFace, data=form, headers=self.head_1, verify=False).json()
+            json_res = httpClient.send(self.urls['chechFace'], data=form)
 #            println(json_res)
             if json_res['status']:
                 if json_res['status'] and json_res['data']['face_flag']:
                     form_1 = {
-                            'successSecret' : secretStr,
+                            'successSecret' : secretStr[:-1],
                             '_json_att': ''
                         }
-                    rate_res = req.post(self.url_getSuccessRate, data=form_1, headers=self.head_1, verify=False).json()
+                    rate_res = httpClient.send(self.urls['getSuccessRate'], data=form_1)
 #                    println(secretStr)
 #                    println(rate_res)
                     if rate_res['status']:
@@ -924,15 +866,19 @@ class HBOrder(object):
                             else:
                                 break  
                     else:
+                        resDict.update({'status' : False})
                         msg = rate_res['messages'][0]
                 else:
                     resDict.update({'msg' : json_res['messages'][0]})
             else:
-                msg = '备选车次席别提交的候补订单较多，可更换车次、席别或稍后重试'
+                resDict.update({'status' : False})
+                msg = json_res['messages'][0]
+                if msg.find('已有待支付') > -1:
+                    break
             i += 1
         if len(secretList) == 0:
             resDict.update({'status' : False})
-        resDict.update({'status' : msg})
+        resDict.update({'msg' : msg})
         resDict.update({'secretList' : secretList})
         return resDict
     
@@ -945,8 +891,7 @@ class HBOrder(object):
                 'secretList' : secretStr,
                 '_json_att': ''
             }
-        global req
-        json_res = req.post(self.url_submitOrderRequest, data=form, headers=self.head_1, verify=False).json()
+        json_res = httpClient.send(self.urls['SubmitOrderRequestRsp'], data=form)
         if json_res['status']:
             println('提交候补订单成功！')
         else:
@@ -957,32 +902,29 @@ class HBOrder(object):
         return json_res['status'];
     
     
-    def initApi(self):
-        global req
-        flag = True
+    def initApi(self, passengers):
+#        flag = True
         resDict = {'status' : True}
-        flag = self.viewUrl(self.url_conf)['status']
-        if flag:
-            pass_res = req.post(self.url_pass, headers=self.head_2, verify=False).json()
-            passengers = pass_res['data']['normal_passengers']
-            resDict.update({'pass' : passengers})
-            init_res = self.viewUrl(self.url_passInitApi)
-            if init_res['status']:
-                jzParam = init_res['data']['jzdhDateE'] + '#' +init_res['data']['jzdhHourE'].replace(':', '#')
-                resDict.update({'jzParam' : jzParam})
-                resDict.update({'hbTrainList' : init_res['data']['hbTrainList']})
-        resDict.update({'status' : flag})
+#        flag = self.viewUrl(self.url_conf)['status']
+#        if flag:
+        resDict.update({'pass' : passengers})
+        init_res = self.viewUrl(self.urls['passengerInitApi'])
+        if init_res['status']:
+            jzParam = init_res['data']['jzdhDateE'] + '#' +init_res['data']['jzdhHourE'].replace(':', '#')
+            resDict.update({'jzParam' : jzParam})
+            resDict.update({'hbTrainList' : init_res['data']['hbTrainList']})
+#        resDict.update({'status' : flag})
         return resDict
     
     
     def getQueueNum(self):
         '''获取排队序号'''
-        global req
-        json_res = req.post(self.url_getQueueNum, headers=self.head_2, verify=False).json()
+        json_res = httpClient.send(self.urls['getQueueNum'])
+#        log(json_res)
         if json_res['status'] and json_res['data']['flag']:
             msg = '候补排队成功！'
             for q in json_res['data']['queueNum']:
-                msg = msg + '车次[{}], 当前排在第{}位;'.format(q['station_train_code'], str(q['queue_num']))
+                msg = msg + '车次[{}], 排队信息：{}; '.format(q['station_train_code'], q['queue_info'])
             println(msg)
             return True
         else:
@@ -1039,7 +981,7 @@ class HBOrder(object):
                 'lkParam' : ''
             }
         global req
-        json_res = req.post(self.url_confirmHB, data=form, headers=self.head_2, verify=False).json()
+        json_res = httpClient.send(self.urls['confirmHB'], data=form)
         if json_res['status']:
             println('确认候补订单成功！')
         else:
@@ -1056,13 +998,16 @@ class HBOrder(object):
             while n < 30:
                 n += 1
                 println('第[' + str(n) + ']次查询候补订单状态...')
-                html = req.post(self.url_queryQueue, headers=self.head_2, verify=False).json()
+                html = httpClient.send(self.urls['queryQueue'])
 #                println(html)
                 if html['status']:
-                    waitTime = html['data']['waitTime']
-                    if waitTime == -1:
+                    status = html['data']['status']
+                    waitTime = 0.1
+                    if 'waitTime' in html['data']:
+                        waitTime = html['data']['waitTime']
+                    if status == 1:
                         resDict.update({'status' : True})
-                        resDict.update({'orderId' : html['data']['orderId']})
+#                        resDict.update({'orderId' : html['data']['orderId']})
                         msg = '候补成功'
                         break
                     elif waitTime == -100:
@@ -1071,7 +1016,7 @@ class HBOrder(object):
                         msg = html['data']['msg']
                         break
                     else:
-                        time.sleep(int(waitTime) + 1)
+                        time.sleep(int(waitTime) + 0.5)
                 else:
                     msg = html['data']['messages']
         except Exception as ex:
@@ -1082,8 +1027,7 @@ class HBOrder(object):
         
     
     def viewUrl(self, url):
-        global req
-        json_res = req.post(url, headers=self.head_2, verify=False).json()
+        json_res = httpClient.send(url)
         if json_res['status']:
             pass
         else:
@@ -1212,9 +1156,15 @@ def pass_captcha():
 #    }
 #    res = req.get(url_pic, headers=headers, verify=False)
     rep_json = httpClient.send(urlConf.urls['getCodeImg1'])
+    i = 1
     while rep_json == None:
-        time.sleep(3)
+        if i > 5:
+            break
+        i = i + 1
+        time.sleep(2)
         rep_json = httpClient.send(urlConf.urls['getCodeImg1'])
+        if 'image' not in rep_json:
+            continue
     base64_str = rep_json['image']
 #    print(base64_str)
     html_pic = base64.b64decode(base64_str)
@@ -1334,7 +1284,7 @@ def order(bkInfo):
         if is_core:
             global sleep_base
             sleep_base = cfg['core_sleep_base']
-        st = round(random.uniform(1.2 * len(booking_list), (7 - int(bkInfo.rank)) / 2) + random.uniform(sleep_base, len(booking_list) / 2.0 + sleep_base), 2)
+        st = round(random.uniform(sleep_base + 0.5 * len(booking_list), sleep_base + (7 - int(bkInfo.rank)) / 2), 2)
 #        st = 0
 #        if len(cdn_list) < 3:
 #            st = 1
@@ -1446,18 +1396,16 @@ def order(bkInfo):
                     lock.release()
                     order = Order()
                     auth_res = order.auth()
+                    loginOut = False
                     while auth_res['status'] != True or auth_res['realname'] != bkInfo.realname:
-                        if 'realname' in auth_res and auth_res['realname'] != bkInfo.realname:
-                            log('登录账号用户姓名与配置文件不一致，请检查！')
-                            break
                         if auth_res['status'] == True:
                             # 先退出当前登录账号
-                            url_logout = 'https://kyfw.12306.cn/otn/login/loginOut'
-                            try:
-                                global req
-                                req.get(url_logout, verify=False).text
-                            except:
-                                pass
+                            httpClient.send(urlConf.urls['loginOut'])
+                            loginOut = True
+                            # 进入下一次循环
+                        if loginOut and 'realname' in auth_res and auth_res['realname'] != bkInfo.realname:
+                            log('登录账号用户姓名与配置文件不一致，请检查！')
+                            break
                         # 填写验证码
                         login = Login()
                         login.get_rail_deviceid()
@@ -1470,7 +1418,7 @@ def order(bkInfo):
                         answer = login.captcha(answer_num)
                         login.login(bkInfo.username, bkInfo.password, answer)
                         auth_res = order.auth()
-                    dump(req,_path)
+                    dump(httpClient,req_cache_path)
                     
                 # 判断候补
                 hb_id = '{}-{}-{}-{}'.format(bkInfo.passengers_name, date, from_station, to_station)
@@ -1481,22 +1429,24 @@ def order(bkInfo):
                         hb_trains.append(result[int(hbt_idx) - 1].split('|')[0])
                         hb_seats.append(hb_trains_idx[hbt_idx])
                     hbOrder = HBOrder()
+                    # 乘车人
+                    passengers = getPassengers()
                     ckf_res = hbOrder.chechFace(hb_trains, hb_seats)
                     if ckf_res['status']:
                         submit_res = hbOrder.submitOrderRequest(ckf_res['secretList'])
                         if submit_res:
-                            init_res = hbOrder.initApi()
-                            if init_res['status'] and hbOrder.getQueueNum()['status']:
+                            init_res = hbOrder.initApi(passengers)
+                            if init_res['status'] and hbOrder.getQueueNum():
                                 confirm_res = hbOrder.confirmHB(init_res['pass'],init_res['hbTrainList'],init_res['jzParam'], bkInfo)
-                                if confirm_res['status']:
+                                if confirm_res:
                                     qq_res = hbOrder.queryQueue()
                                     if qq_res['status']:
                                         hb_finish_list.update({hb_id : True})
                                         # 发送邮件通知
-                                        println('恭喜您，抢票成功！')
+                                        println('恭喜您，候补抢票成功！')
                                         subject = '自助订票系统--订票成功通知'
                                         success_info = '<div>主机[' + local_ip + ']通知：恭喜您，车票候补成功，请及时支付！</div><div style="color: #000000; padding-top: 5px; padding-bottom: 5px; font-weight: bold;"><div>订单信息如下：</div>'
-                                        success_info = success_info + bkInfo.passengers_name + ' ' + date + '，' + from_station + '-->' + to_station + '。</div>'
+                                        success_info = success_info + ','.join(bkInfo.passengers_name) + ' ' + date + '，' + from_station + '-->' + to_station + '。</div>'
                                         success_info = success_info + '<div><p>---------------------<br/>From: 12306 PABS<br/>' + datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '</p><div>'
                                         email = SendEmail()
                                         send_res = email.send(bkInfo.email, subject, success_info)
@@ -1523,7 +1473,7 @@ def order(bkInfo):
                     train_number = train_idx
                     # 提交订单
                     passengers = order.passengers()  # 打印乘客信息
-                    c_res = order.checkUser()
+#                    c_res = order.checkUser()
                     o_res = order.order(result, train_number, from_station, to_station, date)
                     if o_res['status'] is not True and 'messages' in o_res:
                         if o_res['messages'][0].find('有未处理的订单') > -1 or o_res['messages'][0].find('未完成订单') > -1  or o_res['messages'][0].find('行程冲突') > -1 :
@@ -1686,7 +1636,9 @@ class BookingInfo(object):
         # 候选坐席类别
         self.candidate_seats = booking['candidate_seats'].split(',')
         # 选座
-        self.choose_seats = booking['choose_seats'].split(',')
+        self.choose_seats = []
+        if len(booking['choose_seats']) > 0:
+            self.choose_seats = booking['choose_seats'].split(',')
         # 邮箱
         self.email = booking['email']
         # 线程数
@@ -1962,7 +1914,7 @@ def login_sys():
         answer = login.captcha(answer_num)
         login.login(uname, pwd, answer)
         auth_res = order.auth()
-    dump(req,_path)
+    dump(httpClient,req_cache_path)
 
 def get_left_ticket_path():
     global req
@@ -1980,18 +1932,83 @@ def get_left_ticket_path():
         left_ticket_path = 'leftTicket/queryA'
 
 def kill_all_chromedriver():
-    pids = psutil.pids()
-    for pid in pids:
-        p = psutil.Process(pid)
-        if p.name() == 'chromedriver.exe':
-             os.popen('taskkill.exe /pid:' + str(pid))
+    try:
+        pids = psutil.pids()
+        for pid in pids:
+            p = psutil.Process(pid)
+            if p.name() == 'chromedriver.exe':
+                 os.popen('taskkill.exe /pid:' + str(pid))
+    except:
+         pass
 
-def get_index_page():
+
+def get_chrome_deviceid():
     kill_all_chromedriver()
     global driver
     if driver == None:
         driver = webdriver.Chrome(webdriver_path)
-    driver.get(cfg['index_page'])
+    _device = {}
+    try:    
+        driver.get(cfg['index_page'])
+        time.sleep(2)
+        url = 'https://kyfw.12306.cn/otn/{}?leftTicketDTO.train_date={}&leftTicketDTO.from_station=BJP&leftTicketDTO.to_station=JNK&purpose_codes=ADULT'.format(
+                left_ticket_path, datetime.datetime.now().strftime('%Y-%m-%d'))
+        driver.get(url)
+        time.sleep(3)
+        for cookie in driver.get_cookies():
+            if cookie['name'] == 'RAIL_EXPIRATION' or cookie['name'] == 'RAIL_DEVICEID':
+#                    req.cookies[cookie['name']] = cookie['value']
+                _device.update(cookie['name'], cookie['value'])
+    except:
+        pass
+    return _device
+def getPassengers():
+    '''打印乘客信息'''
+    # 确认乘客信息
+    form = {
+        '_json_att': ''
+    }
+    global req
+    # getPassCodeNew
+    html_pass = httpClient.send(urlConf.urls['get_passengerDTOs'], data=form)
+    passengers = html_pass['data']['normal_passengers']
+    return passengers
+
+def get_rail_deviceid():
+    # 读取本地
+    _device = load_obj(deviceid_cache_path)
+    deviceid_key = 'RAIL_DEVICEID'
+    exp_key = 'RAIL_EXPIRATION'
+    if _device != None:
+        if exp_key in _device:
+            n = int(time.time() * 1000)
+            exp = int(_device.get(exp_key))
+            if exp > n:
+                return _device
+            else:
+                _device = None
+        else:
+            _device = None 
+    if _device == None:
+        if cfg['enable_webdriver']:
+            # 从chrome获取
+            _device = get_chrome_deviceid()
+        else:
+            # 从配置文件获取
+            _device = {
+                        deviceid_key : cfg[deviceid_key],
+                        exp_key : cfg[exp_key]
+                 }
+    if _device != None and len(_device) > 1:
+        dump(_device, deviceid_cache_path)
+        # set
+        if req != None:
+            req.cookies[deviceid_key] = _device.get(deviceid_key)
+            req.cookies[exp_key] = _device.get(exp_key)
+        if httpClient != None:
+            httpClient.set_cookie(deviceid_key, _device.get(deviceid_key))
+            httpClient.set_cookie(exp_key, _device.get(exp_key))
+    return _device
 
 global booking_list
 global cddt_trains
@@ -2017,7 +2034,7 @@ sleep_base = cfg['sleep_base']
 task_src = cfg['task_src']
 server_ip = cfg['server_ip']
 server_port = cfg['server_port']
-_path = cfg['req_cache_path']
+req_cache_path = cfg['req_cache_path']
 is_core = cfg['is_core']
 real_host = cfg['real_host']
 enable_hb = cfg['enable_hb']
@@ -2025,16 +2042,16 @@ driver = None
 
 
 if __name__ == '__main__':
+
     try:
-        req = load_obj(_path)
-        if req == None:
-            req = requests.Session()
+        httpClient = load_obj(req_cache_path)
+        if httpClient == None:
+            httpClient = HTTPClient(0, 0)
         if cfg['auto_captcha'] == False:
             login_sys()
         check_sleep_time('系统将在06:00以后继续抢票')
         get_left_ticket_path()
-        if cfg['enable_webdriver']:
-            get_index_page()
+        get_rail_deviceid()
         log('*' * 30 + '12306自动抢票开始' + '*' * 30)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)

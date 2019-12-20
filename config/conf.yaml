@@ -38,7 +38,7 @@ encoding : 'utf-8'
 
 sys_name : 'PABS'
 
-log_path : 'log/logging.log'
+log_path : 'tmp/log/logging.log'
 
 # 是否检查休息时间 默认：True
 check_sleep_time : True
@@ -50,9 +50,9 @@ core_sleep_base : 3
 # 任务获取方式
 task_src : 'local' #local/net
 # 请求缓存路径
-req_cache_path : 'cache/req.cache'
-# algID缓存路径
-algID_cache_path : 'cache/algID.cache'
+req_cache_path : 'cache/httpClient.cache'
+# deviceid缓存路径
+deviceid_cache_path : 'cache/deviceid.cache'
 # 订票信息文件
 booking_filename: 'config/booking.yaml'
 
@@ -74,3 +74,7 @@ loop_play : False
 finish_task_audio : 'audio/HeartsDesire.mp3'
 # 邮件发送失败通知音乐
 post_failed_audio : 'audio/Lively.mp3'
+# 手动配置 RAIL_DEVICEID
+RAIL_DEVICEID: ''
+# exp
+RAIL_EXPIRATION: ''

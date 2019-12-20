@@ -32,6 +32,13 @@ server.py--邮件代发服务端程序<br>
 client.py--邮件代发客户端程序(ps: 有些网络下邮件发送失败，需要代发)<br>
 captcha/model.h5--文字识别数据文件<br>
 captcha/12306.image.model.h5--图片识别数据文件，数据文件未上传至仓库，请自行[下载](https://pan.baidu.com/s/1OsBIBM4rl8EnpZt7VYiD9g)<br>
+<br>
+运行文件：<br>
+server.py<br>
+main.py<br>
+重点配置：<br>
+conf.yaml<br>
+booking.yaml<br>
 
 ### 致谢
 程序参考了部分开源项目，对以下同仁表示感谢~<br>
