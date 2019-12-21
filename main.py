@@ -1232,11 +1232,13 @@ def order(bkInfo):
     n = 0
     avg_time = -1
     purpose_codes = 'ADULT'
-    stu_flag = True
+    stu_flag = False
     for _type in bkInfo.ticket_types:
         if _type.find('学生') < 0:
             stu_flag = False
             break
+        else:
+            stu_flag = True
     if stu_flag:
         purpose_codes = '0X00'
     while res['status'] != True:
