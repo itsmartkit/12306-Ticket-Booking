@@ -12,6 +12,8 @@
 9.远程任务：支持从远程服务器下载任务<br>
 9.选座功能：支持选座，优先抢备选座位类型，如：F<br>
 10.候补抢票：开启候补功能后，系统支持候补抢票<br>
+11.全类型抢票支持：支持各种车票类型，如：成人票、儿童票、学生票、残军票<br>
+12.支持起售抢票：开启起售抢票模式后，系统在起售时间到到达后开启高频抢票模式<br>
 
 ### 运行环境
 Python3.6-3.7
@@ -32,7 +34,7 @@ main.py--主程序<br>
 server.py--邮件代发服务端程序<br>
 client.py--邮件代发客户端程序(ps: 有些网络下邮件发送失败，需要代发)<br>
 captcha/model.h5--文字识别数据文件<br>
-captcha/12306.image.model.h5--图片识别数据文件，数据文件未上传至仓库，请自行[下载](https://pan.baidu.com/s/1OsBIBM4rl8EnpZt7VYiD9g)<br>
+captcha/12306.image.model.h5--图片识别数据文件，数据文件未上传至仓库，请自行[下载](http://www.itsmartkit.com/captcha/model.rar)<br>
 <br>
 运行文件：**server.py、main.py**<br>
 重点配置：**conf.yaml、booking.yaml**<br>
