@@ -187,7 +187,7 @@ class Leftquery(object):
             log(ex)
     
     
-    def query(self, n, from_station, to_station, date, cddt_train_types):
+    def query(self, n, from_station, to_station, date, cddt_train_types, purpose_codes):
         '''余票查询'''
         fromstation = self.station_name(from_station)
         tostation = self.station_name(to_station)
@@ -201,8 +201,8 @@ class Leftquery(object):
         if n == 1:
             host = 'kyfw.12306.cn'
         log('[{}]: 余票查询开始，请求主机 --> [{}]'.format(threading.current_thread().getName(), host))
-        url = 'https://{}/otn/{}?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes=ADULT'.format(
-            host, left_ticket_path, date, fromstation, tostation)
+        url = 'https://{}/otn/{}?leftTicketDTO.train_date={}&leftTicketDTO.from_station={}&leftTicketDTO.to_station={}&purpose_codes={}'.format(
+            host, left_ticket_path, date, fromstation, tostation, purpose_codes)
 #        print(url)
         try:
 #            proxie = "{'http': 'http://127.0.0.1:8580'}"
@@ -1231,7 +1231,14 @@ def order(bkInfo):
     order = None
     n = 0
     avg_time = -1
-    
+    purpose_codes = 'ADULT'
+    stu_flag = True
+    for _type in bkInfo.ticket_types:
+        if _type.find('学生') < 0:
+            stu_flag = False
+            break
+    if stu_flag:
+        purpose_codes = '0X00'
     while res['status'] != True:
         check_sleep_time('抢票任务挂起中')
         if len(bkInfo.expired) > 0 and string_toTimestamp(bkInfo.expired) < int(time.time()):
@@ -1283,7 +1290,7 @@ def order(bkInfo):
                 last_req_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 lock.release()
 #                print('[' + threading.current_thread().getName() + '] '+ last_req_time + ': 余票查询开始...')
-                result = query.query(n, from_station, to_station, date, bkInfo.cddt_train_types)
+                result = query.query(n, from_station, to_station, date, bkInfo.cddt_train_types, purpose_codes)
                 if result == None:
                     n -= 1
                     continue
