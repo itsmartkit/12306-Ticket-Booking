@@ -66,6 +66,10 @@ keep_alive_time : 2
 free_time : 80 
 # 相邻两次请求间隔时间，单位s
 sleep_base : 1
+# 预售期30天
+sell_after_day : 30
+# 起售抢票模式
+sell_mode_sleep_time : 0.2
 # 定时任务执行周期
 timespan : 1
 # 是否循环播放音乐 True/False, 默认：False

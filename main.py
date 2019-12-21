@@ -74,6 +74,8 @@ seat_type = {'无座': '1', '硬座': '1', '硬卧': '3', '二等卧': 'J','软�
 
 seat_dic = {21: '高级软卧', 23: '软卧', 26: '无座', 28: '硬卧', 29: '硬座', 30: '二等座', 31: '一等座', 32: '商务座', 33: '动卧'}
 
+ticket_type_dic = {'成人票': '1','儿童票': '2','学生票': '3','残军票': '4','成人': '1','儿童': '2','学生': '3','残军': '4'}
+
 webdriver_path = cfg['webdriver_path']
 
 user_agent = cfg['user_agent']
@@ -159,7 +161,7 @@ class Leftquery(object):
         try:
             global driver
             if driver==None:
-                driver = webdriver.Chrome(webdriver_path)
+                driver = webdriver.Chrome()
             html = None
             try:
                 #driver = webdriver.PhantomJS()
@@ -209,7 +211,7 @@ class Leftquery(object):
                 html = self.query_by_webdriver(url)
             else:
                 html = self.query_by_requests(url)
-            if html == None:
+            if html == None or 'data' not in html:
                 return
 #            print(html)
 #            req.cookies['_jc_save_fromStation'] = parse.quote(from_station + ','+ fromstation)
@@ -403,7 +405,6 @@ class Login(object):
             'appid': 'otn',
             'answer':answer
         }
-        global req
 #        resp = req.post(self.url_login, data=form_login, headers=self.headers, verify=False)
         resp = httpClient.send(self.urls['login'], form_login)
 #        if resp.status_code != 200:
@@ -432,7 +433,7 @@ class Order(object):
         form = {
             '_json_att':''
         }
-        global req
+#        global req
 #        resp_checkuser = req.post(self.url_checkuser, data=form, headers=self.head_1, verify=False).json()
 #        if resp_checkuser['status'] and resp_checkuser['data']['flag']:
 #            return auth_res
@@ -494,7 +495,6 @@ class Order(object):
         form = {
             '_json_att':''
         }
-        global req
         resp_checkuser =  httpClient.send(self.urls['check_user_url'], data=form)
         if resp_checkuser['status'] and resp_checkuser['data']['flag']:
             check_res.update({'status': True})
@@ -516,7 +516,6 @@ class Order(object):
             'query_to_station_name': to_station,  # 目的地
             'undefined': ''  # 固定的
         }
-        global req
         html_order = httpClient.send(self.urls['submit_station_url'], data=form)
 #        log(html_order)
 #        println(req.cookies)
@@ -537,8 +536,11 @@ class Order(object):
         form = {
             '_json_att': ''
         }
-        global req
+
         html_token = httpClient.send(self.urls['initdc_url'], data=form)
+        if type(html_token) is not str:
+            println('获取票价信息异常！')
+            return None
         token = re.findall(r"var globalRepeatSubmitToken = '(.*?)';", html_token)[0]
         leftTicket = re.findall(r"'leftTicketStr':'(.*?)',", html_token)[0]
         key_check_isChange = re.findall(r"'key_check_isChange':'(.*?)',", html_token)[0]
@@ -581,7 +583,7 @@ class Order(object):
         '''打印乘客信息'''
         return getPassengers()
 
-    def chooseseat(self, passengers, passengers_name, stationTrainCode, cddt_seat, token):
+    def chooseseat(self, ticket_types, passengers, passengers_name, stationTrainCode, cddt_seat, token):
         '''选择乘客和座位'''
         
         choose_type = seat_type[cddt_seat]
@@ -597,15 +599,16 @@ class Order(object):
             pass_id = info['passenger_id_no']  # 身份证号
             pass_phone = info['mobile_no']  # 手机号码
             all_enc_str = info['allEncStr']
-#            pass_type = info['passenger_type']  # 证件类型
-            pass_type = '1'  # 默认成人身份证
+            pass_type = info['passenger_id_type_code']  # 证件类型
+            ticket_type = ticket_type_dic[ticket_types[pass_name]] # 车票类型
             dict = {
                 'choose_type': choose_type,
                 'pass_name': pass_name,
                 'pass_id': pass_id,
                 'pass_phone': pass_phone,
                 'pass_type': pass_type,
-                'all_enc_str' : all_enc_str
+                'all_enc_str' : all_enc_str,
+                'ticket_type' : ticket_type
             }
             pass_dict.append(dict)
 
@@ -613,7 +616,7 @@ class Order(object):
 #        TicketStr_list = []
         passengerTicketStr = ''
         for i in pass_dict:
-            TicketStr = i['choose_type'] + ',0,1,' + i['pass_name'] + ',' + i['pass_type'] + ',' + i[
+            TicketStr = i['choose_type'] + ',0,' + i['ticket_type'] + ',' + i['pass_name'] + ',' + i['pass_type'] + ',' + i[
                 'pass_id'] + ',' + i['pass_phone'] + ',N,' + i['all_enc_str']
             passengerTicketStr += TicketStr + '_'
 
@@ -624,13 +627,13 @@ class Order(object):
         passengrStr_list = []
         for i in pass_dict:
             if pass_num == 1:
-                passengerStr = i['pass_name'] + ',' + i['pass_type'] + ',' + i['pass_id'] + ',1'
+                passengerStr = i['pass_name'] + ',' + i['pass_type'] + ',' + i['pass_id'] + ',' + i['ticket_type']
                 passengrStr_list.append(passengerStr)
             elif num == 0:
                 passengerStr = i['pass_name'] + ',' + i['pass_type'] + ',' + i['pass_id'] + ','
                 passengrStr_list.append(passengerStr)
             elif num == pass_num - 1:
-                passengerStr = '1_' + i['pass_name'] + ',' + i['pass_type'] + ',' + i['pass_id'] + ',1'
+                passengerStr = '1_' + i['pass_name'] + ',' + i['pass_type'] + ',' + i['pass_id'] + ',' + i['ticket_type']
                 passengrStr_list.append(passengerStr)
             else:
                 passengerStr = '1_' + i['pass_name'] + ',' + i['pass_type'] + ',' + i['pass_id'] + ','
@@ -653,7 +656,7 @@ class Order(object):
             '_json_att': '',
             'REPEAT_SUBMIT_TOKEN': token
         }
-        global req
+
         html_checkorder = httpClient.send(self.urls['checkOrderInfoUrl'], data=form)
 #        println(html_checkorder)
         if html_checkorder['status'] == True:
@@ -684,7 +687,7 @@ class Order(object):
             '_json_att': '',
             'REPEAT_SUBMIT_TOKEN': token
         }
-        global req
+
         html_count = httpClient.send(self.urls['getQueueCountUrl'], data=form)
 #        println(html_count)
         if html_count['status'] == True:
@@ -728,7 +731,7 @@ class Order(object):
         
 #        if len(chooseSeatsStr) == 0:
 #            form.pop(choose_seats)
-        global req
+
         html_confirm = httpClient.send(self.urls['checkQueueOrderUrl'], data=form)
 #        println(html_confirm)
         #  {'validateMessagesShowId': '_validatorMessage', 'status': True, 'httpstatus': 200, 'data': {'errMsg': '余票不足！', 'submitStatus': False}
@@ -753,7 +756,6 @@ class Order(object):
         resDict.update({'status' : False})
         msg = ''
         try:
-            global req
             n = 0
             while n < 30:
                 n += 1
@@ -789,45 +791,6 @@ class HBOrder(object):
 
     def __init__(self):
         self.urls = urlConf.urls
-        self.url_passcode = 'https://kyfw.12306.cn/otn/passcodeNew/getPassCodeNew?module=passenger&rand=randp&{}'
-        self.url_chechFace = 'https://kyfw.12306.cn/otn/afterNate/chechFace'
-        self.url_getSuccessRate = 'https://kyfw.12306.cn/otn/afterNate/getSuccessRate'
-        self.url_submitOrderRequest = 'https://kyfw.12306.cn/otn/afterNate/submitOrderRequest'
-        self.url_conf = 'https://kyfw.12306.cn/otn/login/conf'
-        self.url_pass = 'https://kyfw.12306.cn/otn/confirmPassenger/getPassengerDTOs'
-        self.url_passInitApi = 'https://kyfw.12306.cn/otn/afterNate/passengerInitApi'
-        self.url_getQueueNum = 'https://kyfw.12306.cn/otn/afterNate/getQueueNum'
-        self.url_confirmHB = 'https://kyfw.12306.cn/otn/afterNate/confirmHB'
-        self.url_queryQueue = 'https://kyfw.12306.cn/otn/afterNate/queryQueue'
-        
-
-        self.head_1 = {
-            'Host':'kyfw.12306.cn',
-            'If-Modified-Since': '0',
-            'Cache-Control': 'no-cache',
-            'Origin':'https://kyfw.12306.cn',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'Accept-Encoding':'gzip, deflate, br',
-            'Accept-Language':'zh-CN,zh;q=0.9',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
-            'Referer': 'https://kyfw.12306.cn/otn/leftTicket/init?linktypeid=dc&fs=%E5%8C%97%E4%BA%AC%E5%8D%97,VNP&ts=%E6%B5%8E%E5%8D%97%E8%A5%BF,JGK&date=2019-10-09&flag=N,N,Y',
-            'User-Agent': user_agent
-        }
-        self.head_2 = {
-            'Host':'kyfw.12306.cn',
-            'If-Modified-Since': '0',
-            'Origin':'https://kyfw.12306.cn',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'Accept-Encoding':'gzip, deflate, br',
-            'Accept-Language':'zh-CN,zh;q=0.9',
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',    
-            'Referer': 'https://kyfw.12306.cn/otn/view/lineUp_toPay.html',
-            'User-Agent': user_agent
-        }
     
     def chechFace(self, secrets, seatTypes):
         resDict = {'status' : True}
@@ -934,7 +897,15 @@ class HBOrder(object):
     def confirmHB(self, passengers, hbTrainList, jzParam, bkInfo):
         '''乘车人'''
         passengers_name = ''
-        for name in bkInfo.passengers_name:
+        ticket_types = {}
+        for n in range(len(bkInfo.passengers_name)):
+            name = bkInfo.passengers_name[n]
+            tt = '成人票'
+            if len(bkInfo.ticket_types) > n:
+                tt = bkInfo.ticket_types[n]
+            if tt not in ticket_type_dic:
+                tt = '成人票'
+            ticket_types.update({name : tt})
             p_idx = 1
             for p in passengers:
 #                            log(p)
@@ -954,21 +925,22 @@ class HBOrder(object):
             pass_id = info['passenger_id_no']  # 身份证号
             pass_phone = info['mobile_no']  # 手机号码
             all_enc_str = info['allEncStr']
-#            pass_type = info['passenger_type']  # 证件类型
-            pass_type = '1'  # 默认成人身份证
+            pass_type = info['passenger_id_type_code']  # 证件类型
+            ticket_type = ticket_type_dic[ticket_types[pass_name]] # 车票类型
             dict = {
                 'pass_name': pass_name,
                 'pass_id': pass_id,
                 'pass_phone': pass_phone,
                 'pass_type': pass_type,
-                'all_enc_str' : all_enc_str
+                'all_enc_str' : all_enc_str,
+                'ticket_type' : ticket_type
             }
             pass_dict.append(dict)
         
         # 拼接passengerInfo
         passengerInfo = ''
         for p in pass_dict:
-            passengerInfo = passengerInfo + '1#{}#1#{}#{};'.format(p['pass_name'],p['pass_id'],p['all_enc_str'])
+            passengerInfo = passengerInfo + '{}#{}#1#{}#{};'.format(p['ticket_type'],p['pass_name'],p['pass_id'],p['all_enc_str'])
         
         hbTrain = ''
         for hbt in hbTrainList:
@@ -980,7 +952,6 @@ class HBOrder(object):
                 'hbTrain' : hbTrain,
                 'lkParam' : ''
             }
-        global req
         json_res = httpClient.send(self.urls['confirmHB'], data=form)
         if json_res['status']:
             println('确认候补订单成功！')
@@ -989,11 +960,9 @@ class HBOrder(object):
         return json_res['status']
     
     def queryQueue(self):
-        global req
         resDict = ({'status' : False})
         msg = ''
         try:
-            global req
             n = 0
             while n < 30:
                 n += 1
@@ -1284,7 +1253,10 @@ def order(bkInfo):
         if is_core:
             global sleep_base
             sleep_base = cfg['core_sleep_base']
-        st = round(random.uniform(sleep_base + 0.5 * len(booking_list), sleep_base + (7 - int(bkInfo.rank)) / 2), 2)
+        st = round(random.uniform(sleep_base + 0.2 * len(booking_list), sleep_base + (7 - int(bkInfo.rank)) / 2), 2)
+        if bkInfo.is_sell_mode:
+            st = cfg['sell_mode_sleep_time']
+            print('*****当前订单为起售抢票模式*****')
 #        st = 0
 #        if len(cdn_list) < 3:
 #            st = 1
@@ -1296,12 +1268,18 @@ def order(bkInfo):
         p_name = ''
         for date in dates:
             try:
+                is_exec_query = check_sell_time(bkInfo.is_sell_mode, date, bkInfo.sell_time)
+                if is_exec_query is False:
+                    delay = 1.5
+                    println('日期【{}】的起售时间未到，本次查询结束，下一查询计划自动延长[{}]秒~'.format(date, delay))
+                    time.sleep(delay)
+                    continue
                 # 防止多次多线程并发封禁ip
                 lock.acquire()
                 str_now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 global last_req_time
                 if last_req_time == str_now:
-                    time.sleep(round(random.uniform(1, (7 - int(bkInfo.rank)) / 2), 2))
+                    time.sleep(round(random.uniform(0.1, (7 - int(bkInfo.rank)) / 2), 2))
                 last_req_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 lock.release()
 #                print('[' + threading.current_thread().getName() + '] '+ last_req_time + ': 余票查询开始...')
@@ -1337,7 +1315,7 @@ def order(bkInfo):
                                     seat_tp = seat_type[seat_dic[sk]]
                                     hb_flag = True
 #                                if info[sk] != '无' and info[sk] != '' and (info[38] == '' or str(info[38]).find(cddt_seat_types[sk]) < 0):
-                                if info[sk] != '无' and info[sk] != '':
+                                if info[sk] != '无' and info[sk] != '' and info[sk] != '*':
 #                                    log(info[3] + info[sk])
                                     if info[sk] == '有' or int(info[sk]) >= len(bkInfo.passengers_name):
                                         seat_flag = True
@@ -1497,10 +1475,20 @@ def order(bkInfo):
                             break
                     # 检查订单
                     content = order.price()  # 打印出票价信息
+                    if content is None:
+                        continue
                     # 选择乘客和座位
                     '''乘车人'''
                     passengers_name = ''
-                    for name in bkInfo.passengers_name:
+                    ticket_types = {}
+                    for n in range(len(bkInfo.passengers_name)):
+                        name = bkInfo.passengers_name[n]
+                        tt = '成人票'
+                        if len(bkInfo.ticket_types) > n:
+                            tt = bkInfo.ticket_types[n]
+                        if tt not in ticket_type_dic:
+                            tt = '成人票'
+                        ticket_types.update({name : tt})
                         p_idx = 1
                         for p in passengers:
 #                            log(p)
@@ -1525,7 +1513,7 @@ def order(bkInfo):
                     for seat in cddt_seats:
                         choose_seat = seat
 #                        print(choose_seat)
-                        pass_info = order.chooseseat(passengers, passengers_name, content[2], choose_seat, content[8])
+                        pass_info = order.chooseseat(ticket_types, passengers, passengers_name, content[2], choose_seat, content[8])
                         # 查看余票数
 #                        print('查看余票')
                         order.leftticket(content[0], content[1], content[2], pass_info[2], content[3], content[4], content[5], content[6],
@@ -1631,6 +1619,8 @@ class BookingInfo(object):
         self.dates = booking['dates'].split(',')
         # 乘车人姓名
         self.passengers_name = booking['passengers_name'].split(',')
+        # 车票类型
+        self.ticket_types = booking['ticket_types'].split(',')
         # 候选车次
         self.candidate_trains = booking['candidate_trains'].split(',')
         # 候选坐席类别
@@ -1651,6 +1641,14 @@ class BookingInfo(object):
         self.expired = booking['expired']
         # 火车类型['G','D','K']
         self.cddt_train_types = booking['cddt_train_types'].split(',')
+        # 是否起售抢票模式
+        self.is_sell_mode = False
+        if 'is_sell_mode' in booking:
+            self.is_sell_mode = booking['is_sell_mode']
+        # 起售时间
+        self.sell_time = ''
+        if 'sell_time' in booking:
+            self.sell_time = booking['sell_time']
 
 def playaudio(path, loop_play = False):
     try:
@@ -1875,7 +1873,7 @@ def check_sleep_time(msg):
 
     while is_check_sleep_time and True:
         now = datetime.datetime.now()
-        if (now.hour > 23 and now.minute > 30) or now.hour < 6:
+        if (now.hour > 23 and now.minute > 30) or now.hour < 1:
             print('['+ datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S') +']: 当前时间处于12306网站维护时段，{}...'.format(msg))
             time.sleep((60 - now.minute) * 60 - now.second + 5)
         else:
@@ -1946,7 +1944,7 @@ def get_chrome_deviceid():
     kill_all_chromedriver()
     global driver
     if driver == None:
-        driver = webdriver.Chrome(webdriver_path)
+        driver = webdriver.Chrome()
     _device = {}
     try:    
         driver.get(cfg['index_page'])
@@ -1958,7 +1956,7 @@ def get_chrome_deviceid():
         for cookie in driver.get_cookies():
             if cookie['name'] == 'RAIL_EXPIRATION' or cookie['name'] == 'RAIL_DEVICEID':
 #                    req.cookies[cookie['name']] = cookie['value']
-                _device.update(cookie['name'], cookie['value'])
+                _device.update({cookie['name'] : cookie['value']})
     except:
         pass
     return _device
@@ -1968,7 +1966,6 @@ def getPassengers():
     form = {
         '_json_att': ''
     }
-    global req
     # getPassCodeNew
     html_pass = httpClient.send(urlConf.urls['get_passengerDTOs'], data=form)
     passengers = html_pass['data']['normal_passengers']
@@ -2009,6 +2006,36 @@ def get_rail_deviceid():
             httpClient.set_cookie(deviceid_key, _device.get(deviceid_key))
             httpClient.set_cookie(exp_key, _device.get(exp_key))
     return _device
+'''
+校验是否达到起售时间
+'''
+def check_sell_time(is_sell_mode, book_date, sell_time):
+    _days = 30
+    if 'sell_after_day' in cfg:
+        try:
+            _days = int(cfg['sell_after_day'])
+        except:
+            pass
+    _days = _days - 1
+    flag = False
+    # 订票日期时间戳
+    book_date_stamp = int(time.mktime(time.strptime(book_date, '%Y-%m-%d'))) 
+    # 今日可抢票日期
+    sell_date = (datetime.date.today() + datetime.timedelta(days = _days)) 
+    sell_date_stamp = int(time.mktime(sell_date.timetuple()))
+    # 抢票日期
+    if book_date_stamp <= sell_date_stamp:
+        flag = True
+    if is_sell_mode is False:
+        return flag
+    # 起售时间
+    if type(sell_time) is str and len(sell_time) == 5:
+        now = datetime.datetime.now()
+        nt = now.hour * 3600 + now.minute * 60 + now.second
+        st = int(sell_time.split(':')[0]) * 3600 + int(sell_time.split(':')[1]) * 60 - 3
+        flag = nt > st
+    return flag 
+        
 
 global booking_list
 global cddt_trains

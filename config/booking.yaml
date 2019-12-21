@@ -9,9 +9,12 @@ bookings:
       username : 'xxx'  #12306账号
       password : 'xxx'  #密码
       dates : '2019-09-13'  #日期,例：2019-09-13,2019-09-14
+      is_sell_mode : True  #是否起售抢票模式,True/False
+      sell_time : '12:30'  #起售时间，格式 hh:mm，is_sell_mode为True时生效
       from_station : '北京'  #出发
       to_station : '济南'  #到达
       passengers_name : 'xxx'  #乘车人，例：张三,李四
+      ticket_types : '成人票'  #车票类型：成人票，儿童票，学生票，残军票
       candidate_seats : '二等座'  #备选坐席
       choose_seats : 'F' #选座
       email : 'xxx@163.com'  #通知邮箱 

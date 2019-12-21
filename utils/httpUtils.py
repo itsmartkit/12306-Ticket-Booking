@@ -14,8 +14,7 @@ def _set_header_default():
     header_dict = OrderedDict()
     # header_dict["Accept"] = "application/json, text/plain, */*"
     header_dict["Accept-Encoding"] = "gzip, deflate"
-    header_dict[
-        "User-Agent"] = _set_user_agent()
+    header_dict["User-Agent"] = _set_user_agent()
     header_dict["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
     header_dict["Origin"] = "https://kyfw.12306.cn"
     header_dict["Connection"] = "keep-alive"
@@ -138,7 +137,13 @@ class HTTPClient(object):
         is_cdn = urls.get("is_cdn", False)
         is_test_cdn = urls.get("is_test_cdn", False)
         is_full_url = urls.get("is_full_url", False)
-        error_data = {"code": 99999, "message": u"重试次数达到上限"}
+        error_data = {
+                        "code": 99999, 
+                        "message": u"重试次数达到上限",
+                        "result_code": -1,
+                        "status": False,
+                        "messages": ["服务器响应异常"] 
+                      }
         if data:
             method = "post"
             self.setHeaders({"Content-Length": "{0}".format(len(data))})
