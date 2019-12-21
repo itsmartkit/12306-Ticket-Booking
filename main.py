@@ -161,7 +161,7 @@ class Leftquery(object):
         try:
             global driver
             if driver==None:
-                driver = webdriver.Chrome()
+                driver = get_webdriver()
             html = None
             try:
                 #driver = webdriver.PhantomJS()
@@ -1951,7 +1951,7 @@ def get_chrome_deviceid():
     kill_all_chromedriver()
     global driver
     if driver == None:
-        driver = webdriver.Chrome()
+        driver = get_webdriver()
     _device = {}
     try:    
         driver.get(cfg['index_page'])
@@ -2042,7 +2042,12 @@ def check_sell_time(is_sell_mode, book_date, sell_time):
         st = int(sell_time.split(':')[0]) * 3600 + int(sell_time.split(':')[1]) * 60 - 3
         flag = nt > st
     return flag 
-        
+    
+def get_webdriver():
+    try:
+        return webdriver.Chrome(webdriver_path)
+    except:
+        return webdriver.Chrome()
 
 global booking_list
 global cddt_trains
