@@ -80,6 +80,8 @@ webdriver_path = cfg['webdriver_path']
 
 user_agent = cfg['user_agent']
 
+stu_purpose_codes = '0X00'
+
 def conversion_int(str):
     return int(str)
 
@@ -446,7 +448,7 @@ class Order(object):
 #        form = {
 #            'appid': 'otn'
 #        }
-        html_uam = httpClient.send(self.urls['uamtk-static'], data=form)
+        html_uam = httpClient.send(self.urls['auth'], data=form)
 #        if resp_uam.headers['Content-Type'] != 'application/json;charset=UTF-8':
 #            auth_res.update({'status': False})
 #            return auth_res
@@ -531,7 +533,7 @@ class Order(object):
         return html_order
 #            exit()
 
-    def price(self):
+    def price(self, is_stu_ticket):
         '''打印票价信息'''
         form = {
             '_json_att': ''
@@ -556,7 +558,8 @@ class Order(object):
         train_date = train_date_temp + ' GMT+0800 (中国标准时间)'
         train_location = re.findall(r"tour_flag':'.*?','train_location':'(.*?)'", html_token)[0]
         purpose_codes = re.findall(r"'purpose_codes':'(.*?)',", html_token)[0]
-        
+        if is_stu_ticket:
+            purpose_codes = stu_purpose_codes
         println('token值:' + token)
         println('leftTicket值:' + leftTicket)
         println('key_check_isChange值:' + key_check_isChange)
@@ -567,7 +570,6 @@ class Order(object):
         println('train_date值:' + train_date)
         println('train_location值:' + train_location)
         println('purpose_codes值:' + purpose_codes)
-        
         price_list = re.findall(r"'leftDetails':(.*?),'leftTicketStr", html_token)[0]
         # price = price_list[1:-1].replace('\'', '').split(',')
         println('票价:')
@@ -671,7 +673,7 @@ class Order(object):
 
         return passengerTicketStr, oldpassengerStr, choose_type
 
-    def leftticket(self, train_date, train_no, stationTrainCode, choose_type, fromStationTelecode, toStationTelecode,
+    def leftticket(self, train_tip, train_date, train_no, stationTrainCode, choose_type, fromStationTelecode, toStationTelecode,
                    leftTicket, purpose_codes, train_location, token):
         '''查看余票数量'''
         form = {
@@ -690,6 +692,7 @@ class Order(object):
 
         html_count = httpClient.send(self.urls['getQueueCountUrl'], data=form)
 #        println(html_count)
+        flag = False
         if html_count['status'] == True:
 #            println('查询余票数量成功!')
             ticket = html_count['data']['ticket']
@@ -697,10 +700,18 @@ class Order(object):
             countT = html_count['data']['countT']
                 # if int(countT) is 0:
             println(u'排队成功, 你排在: 第 {1} 位, 该坐席类型还有余票: {0} 张'.format(ticket_split, countT))
+            if int(ticket_split) == 0:  
+                println('小黑屋新增成员：['+ train_tip + ']')
+                ticket_black_list.update({train_tip : ticket_black_list_time })
+                flag = False
+            else:
+                flag = True
 #            count = html_count['data']['ticket']
 #            println('此座位类型还有余票' + count + '张~')
         else:
+            flag = False
             println('检查余票数量失败!')
+        return flag
 #            exit()
 
 
@@ -746,7 +757,9 @@ class Order(object):
 #            println('确认购票失败: {}'.format(html_confirm['data']['errMsg']))
 #            return False
             resDict.update({'status' : False})
-            msg = '确认购票失败: {}'.format(html_confirm['data']['errMsg'])
+            msg = '确认购票失败!'
+            if 'data' in html_confirm:
+                msg = '确认购票失败: {}'.format(html_confirm['data']['errMsg'])
         resDict.update({'msg' : msg})
         println(msg)
         return resDict
@@ -1134,6 +1147,8 @@ def pass_captcha():
         rep_json = httpClient.send(urlConf.urls['getCodeImg1'])
         if 'image' not in rep_json:
             continue
+    if 'image' not in rep_json:
+        return ''
     base64_str = rep_json['image']
 #    print(base64_str)
     html_pic = base64.b64decode(base64_str)
@@ -1240,7 +1255,7 @@ def order(bkInfo):
         else:
             stu_flag = True
     if stu_flag:
-        purpose_codes = '0X00'
+        purpose_codes = stu_purpose_codes
     while res['status'] != True:
         check_sleep_time('抢票任务挂起中')
         if len(bkInfo.expired) > 0 and string_toTimestamp(bkInfo.expired) < int(time.time()):
@@ -1418,6 +1433,8 @@ def order(bkInfo):
                     hbOrder = HBOrder()
                     # 乘车人
                     passengers = getPassengers()
+                    if passengers == None:
+                        continue
                     ckf_res = hbOrder.chechFace(hb_trains, hb_seats)
                     if ckf_res['status']:
                         submit_res = hbOrder.submitOrderRequest(ckf_res['secretList'])
@@ -1460,6 +1477,8 @@ def order(bkInfo):
                     train_number = train_idx
                     # 提交订单
                     passengers = order.passengers()  # 打印乘客信息
+                    if passengers == None:
+                        continue
 #                    c_res = order.checkUser()
                     o_res = order.order(result, train_number, from_station, to_station, date)
                     if o_res['status'] is not True and 'messages' in o_res:
@@ -1483,7 +1502,7 @@ def order(bkInfo):
                             booking_list[info_key] = True
                             break
                     # 检查订单
-                    content = order.price()  # 打印出票价信息
+                    content = order.price(stu_flag)  # 打印出票价信息
                     if content is None:
                         continue
                     # 选择乘客和座位
@@ -1525,11 +1544,13 @@ def order(bkInfo):
                         pass_info = order.chooseseat(ticket_types, passengers, passengers_name, content[2], choose_seat, content[8])
                         # 查看余票数
 #                        print('查看余票')
-                        order.leftticket(content[0], content[1], content[2], pass_info[2], content[3], content[4], content[5], content[6],
+                        left_res =  order.leftticket(train_tip, content[0], content[1], content[2], pass_info[2], content[3], content[4], content[5], content[6],
                                          content[7], content[8])
                         # 是否确认购票
                         # order.sure()
                         # 最终确认订单
+#                        res = {'status': left_res}
+#                        if left_res:
                         res = order.confirm(pass_info[0], pass_info[1], content[9], content[5], content[6], content[7], bkInfo.choose_seats, content[8])
                         
                         if res['status']:
@@ -1977,6 +1998,8 @@ def getPassengers():
     }
     # getPassCodeNew
     html_pass = httpClient.send(urlConf.urls['get_passengerDTOs'], data=form)
+    if 'data' not in html_pass:
+        return None
     passengers = html_pass['data']['normal_passengers']
     return passengers
 
