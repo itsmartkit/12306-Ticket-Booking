@@ -311,6 +311,7 @@ class Login(object):
 #        self.username = username
 #        self.password = password
         self.urls = urlConf.urls
+        self.url_pic = urlConf.urls['getCodeImg']['req_url']
         self.headers = {
             'Host':'kyfw.12306.cn',
             'Accept' : 'application/json, text/javascript, */*; q=0.01',
@@ -321,34 +322,6 @@ class Login(object):
             'Accept-Encoding':'gzip, deflate, br',
             'Accept-Language':'zh-CN,zh;q=0.9',
         }
-        
-    def get_rail_deviceid(self):
-        '''获取rail_deviceid'''
-        if cfg['enable_webdriver']:
-            return
-        global req
-#        # 减少请求次数，读取磁盘缓存
-#        algID_path = cfg['algID_cache_path']
-#        algID = None
-#        if os.path.exists(algID_path):
-#            f_stat = os.stat(algID_path)
-#            ns = time.mktime(datetime.datetime.now().timetuple())
-#            ms = f_stat.st_mtime
-#            if (ns - ms) < 86400:
-#                algID = load_obj(algID_path)
-#        if algID == None:
-#            html = requests.get('https://kyfw.12306.cn/otn/HttpZF/GetJS', headers=self.headers).text
-#            algID = re.search(r'algID\\x3d(.*?)\\x', html).group(1)
-#            dump(algID, algID_path)
-        url_rail_deviceid = 'https://kyfw.12306.cn/otn/HttpZF/logdevice?algID=foiUJKaTni&hashCode=2Sg9KA5MMgmlG7tVI5bWe5PLMnb0bnIOjapoSCcoZu8&FMQw=1&q4f3=zh-CN&VySQ=FGFGiLEJQCz1Fj5hP76XtchhB59uzrmv&VPIf=1&custID=133&VEek=unknown&dzuS=0&yD16=0&EOQP=382b3eb7cfc5d30f1b59cb283d1acaf3&lEnu=3232261143&jp76=52d67b2a5aa5e031084733d5006cc664&hAqN=Linux%20x86_64&platform=WEB&ks0Q=d22ca0b81584fbea62237b14bd04c866&TeRS=1003x1920&tOHY=24xx1080x1920&Fvje=i1l1o1s1&q5aJ=-8&wNLf=99115dfb07133750ba677d055874de87&0aew=Mozilla/5.0%20(X11;%20Linux%20x86_64)%20AppleWebKit/537.36%20(KHTML,%20like%20Gecko)%20Chrome/75.0.3770.142%20Safari/537.36&E3gR=7484b4d443309cac29a8c080495fc1c0&timestamp='
-        html_rail_deviceid = req.get(url_rail_deviceid + str(int(time.time()*1000)),headers=self.headers).text
-        callback = html_rail_deviceid.replace("callbackFunction('", '').replace("')", '')
-        callback_json = json.loads(callback)
-        rail_deviceid = callback_json['dfp']
-        rail_expiration = callback_json['exp']
-#        println(rail_expiration)
-        req.cookies['RAIL_DEVICEID'] = rail_deviceid
-        req.cookies['RAIL_EXPIRATION'] = rail_expiration
 
     def showimg(self):
         '''显示验证码图片'''
@@ -560,15 +533,15 @@ class Order(object):
         purpose_codes = re.findall(r"'purpose_codes':'(.*?)',", html_token)[0]
         if is_stu_ticket:
             purpose_codes = stu_purpose_codes
-        println('token值:' + token)
-        println('leftTicket值:' + leftTicket)
-        println('key_check_isChange值:' + key_check_isChange)
-        println('train_no值:' + train_no)
+#        println('token值:' + token)
+#        println('leftTicket值:' + leftTicket)
+#        println('key_check_isChange值:' + key_check_isChange)
+#        println('train_no值:' + train_no)
         println('stationTrainCode值:' + stationTrainCode)
-        println('fromStationTelecode值:' + fromStationTelecode)
-        println('toStationTelecode值:' + toStationTelecode)
-        println('train_date值:' + train_date)
-        println('train_location值:' + train_location)
+#        println('fromStationTelecode值:' + fromStationTelecode)
+#        println('toStationTelecode值:' + toStationTelecode)
+#        println('train_date值:' + train_date)
+#        println('train_location值:' + train_location)
         println('purpose_codes值:' + purpose_codes)
         price_list = re.findall(r"'leftDetails':(.*?),'leftTicketStr", html_token)[0]
         # price = price_list[1:-1].replace('\'', '').split(',')
@@ -1142,7 +1115,7 @@ def pass_captcha():
     while rep_json == None:
         if i > 5:
             break
-        i = i + 1
+        i += 1
         time.sleep(2)
         rep_json = httpClient.send(urlConf.urls['getCodeImg1'])
         if 'image' not in rep_json:
@@ -1293,11 +1266,15 @@ def order(bkInfo):
         for date in dates:
             try:
                 is_exec_query = check_sell_time(bkInfo.is_sell_mode, date, bkInfo.sell_time)
-                if is_exec_query is False:
-                    delay = 1.5
+                delay = cfg.get('sell_mode_delay_time', 2)
+                if is_exec_query[0] is False:
+                    n -= 1
                     println('日期【{}】的起售时间未到，本次查询结束，下一查询计划自动延长[{}]秒~'.format(date, delay))
                     time.sleep(delay)
                     continue
+                if is_exec_query[0] and is_exec_query[1] >= cfg.get('sell_mode_exp_time', 30):
+                    println('车票已发售[{}]分钟，系统自动切入普通抢票模式，本次余票查询延长[{}]秒~'.format(is_exec_query[1], delay))
+                    time.sleep(delay)
                 # 防止多次多线程并发封禁ip
                 lock.acquire()
                 str_now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -1410,7 +1387,7 @@ def order(bkInfo):
                             break
                         # 填写验证码
                         login = Login()
-                        login.get_rail_deviceid()
+                        get_rail_deviceid()
                         answer_num = pass_captcha()         
                         if answer_num == None:
                             time.sleep(3)
@@ -1508,6 +1485,7 @@ def order(bkInfo):
                     # 选择乘客和座位
                     '''乘车人'''
                     passengers_name = ''
+                    p_name = ''
                     ticket_types = {}
                     for n in range(len(bkInfo.passengers_name)):
                         name = bkInfo.passengers_name[n]
@@ -1630,6 +1608,7 @@ def run(bkInfo):
            
 class BookingInfo(object):
     def __init__(self, booking):
+        self.booking = booking
         # 账号
         self.uuid = booking['bno'] + '-' + booking['dates']
         
@@ -1936,7 +1915,7 @@ def login_sys():
             uname =input('请输入12306账号：')
             pwd = getpass.getpass('请输入12306密码：')
         login = Login()
-        login.get_rail_deviceid()
+        get_rail_deviceid()
         login.showimg()
         answer_num = input('请填入验证码(序号为1~8,中间以逗号隔开,例:1,2):')
         answer = login.captcha(answer_num)
@@ -2050,6 +2029,8 @@ def check_sell_time(is_sell_mode, book_date, sell_time):
             pass
     _days = _days - 1
     flag = False
+    # 开售了多久了，minute
+    over_time = 30
     # 订票日期时间戳
     book_date_stamp = int(time.mktime(time.strptime(book_date, '%Y-%m-%d'))) 
     # 今日可抢票日期
@@ -2066,7 +2047,8 @@ def check_sell_time(is_sell_mode, book_date, sell_time):
         nt = now.hour * 3600 + now.minute * 60 + now.second
         st = int(sell_time.split(':')[0]) * 3600 + int(sell_time.split(':')[1]) * 60 - 3
         flag = nt > st
-    return flag 
+        over_time = int((nt-st)/60)
+    return flag, over_time
     
 def get_webdriver():
     try:

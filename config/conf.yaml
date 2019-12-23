@@ -11,16 +11,16 @@ getip_url : 'http://www.itsmartkit.com/ip.php'
 server_ip : '39.95.20.xxx'
 server_port : 12306
 
-# 是否启用候补
-enable_hb : False
-
-# 自动识别验证码
-auto_captcha : True
+webdriver_path : '/usr/local/bin/chromedriver'
 
 # 是否启用webdriver
 enable_webdriver : True
 
-webdriver_path : '/usr/local/bin/chromedriver'
+# 是否启用候补
+enable_hb : True
+
+# 自动识别验证码
+auto_captcha : True
 
 index_page : 'https://kyfw.12306.cn/otn/leftTicket/init'
 
@@ -68,8 +68,12 @@ free_time : 80
 sleep_base : 1
 # 预售期30天
 sell_after_day : 30
-# 起售抢票模式
+# 起售抢票模式查询周期
 sell_mode_sleep_time : 0.2
+# 未达到起售时间的休眠时长，单位s
+sell_mode_delay_time : 2
+# 发售多久后起售模式失效，minute
+sell_mode_exp_time : 20
 # 定时任务执行周期
 timespan : 1
 # 是否循环播放音乐 True/False, 默认：False
