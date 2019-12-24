@@ -2,7 +2,7 @@
 
 bookings:
 
-    - bno: '20190821153001' #单号
+    - bno: '20190821153001' #单号，用于区别多个抢票任务，建议格式yyyyMMddhhmmxx
       group : 'BJ->JN' #任务组编码
       rank : 2 #优先级,1-5,5最高
       realname : '张三' #登录人姓名
