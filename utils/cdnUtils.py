@@ -82,6 +82,9 @@ class CDNProxy:
         # www.wepcc.com
         self.ping_wepcc(cdn_list)
         
+        # myssl.com
+        self.ping_myssl(cdn_list)
+        
         # update cdn file
         cdn_list = list(set(cdn_list))
         self.update_cdn_file(cdn_list)
@@ -91,6 +94,7 @@ class CDNProxy:
         
 
     def ping_chinaz(self, cdn_list):
+        # http://cdn.chinaz.com/search/?host=kyfw.12306.cn
         self.println('[ping.chinaz.com] 分析cdn开始...')
         city_id = self.get_city_id()
         for guid in city_id:      
@@ -196,12 +200,32 @@ class CDNProxy:
                         'node': i,
                         'host': 'kyfw.12306.cn',
                     }
-                    rep = req.post(ping_url, data, headers=headers, timeout = 3).json()
+                    rep = req.post(ping_url, data, headers=headers, timeout = self.timeout).json()
     #                    text = bytes.decode(rep.content)
                     cdn_list.append(rep['data']['ip'])
                 except:
                     pass
             self.println('[www.wepcc.com] 分析cdn完毕！')
+        except:
+            pass
+        
+    def ping_myssl(self, cdn_list):
+        self.println('[myssl.com] 分析cdn开始...')
+        url = 'https://myssl.com/api/v1/tools/cdn_check?domain=kyfw.12306.cn'
+        headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/77.0.3833.0 Safari/537.36',
+                'Accept': '*/*',
+                'Referer': 'https://myssl.com/cdn_check.html?domain=kyfw.12306.cn'
+            }
+        try:
+            rep = req.get(url, headers=headers, timeout = 60)
+            text = bytes.decode(rep.content)
+            json_res = demjson.decode(text)
+            if 'code' in json_res and json_res['code'] == 0:
+                hosts = json_res['data']
+                for host in hosts:  
+                    cdn_list.append(host['ip'])
+            self.println('[myssl.com] 分析cdn完毕！')
         except:
             pass
 
@@ -223,16 +247,6 @@ class CDNProxy:
                 pass
     def open_cdn_file(self):
         cdn = []
-        # cdn_re = re.compile("CONNECT (\S+) HTTP/1.1")
-        # path = os.path.join(os.path.dirname(__file__), '../cdn_list')
-        # with open(path, "r") as f:
-        #     for i in f.readlines():
-        #         # print(i.replace("\n", ""))
-        #         cdn_list = re.findall(cdn_re, i)
-        #         if cdn_list and "kyfw.12306.cn:443" not in cdn_list:
-        #             print(cdn_list[0].split(":")[0])
-        #             cdn.append(cdn_list[0].split(":")[0])
-        #     return cdn
         path = os.path.join(os.path.dirname(__file__), '../cdn_list')
         with open(path, 'r') as f:
             for i in f.readlines():
@@ -265,3 +279,4 @@ if __name__ == '__main__':
     t = threading.Thread(target=cdn.update_cdn_list(), args=())
     t.setDaemon(True)
     t.start()
+    
