@@ -73,6 +73,7 @@ Python3.6-3.7
 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 ```
 #### 文件说明
+audio/.mp3--音频文件，用于通知，请自行[下载](http://www.itsmartkit.com/audio/audio.rar)<br>
 config/booking.yaml--抢票任务配置文件<br>
 config/conf.yaml--系统配置文件<br>
 utils/sendEmail.py--邮件发送模块<br>
