@@ -73,7 +73,7 @@ Python3.6-3.7
 pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 ```
 #### 文件说明
-audio/.mp3--音频文件，用于通知，请自行[下载](http://www.itsmartkit.com/audio/audio.rar)<br>
+audio/.mp3--音频文件，用于通知，请自行[下载](http://www.itsmartkit.com/audio/audio.zip)<br>
 config/booking.yaml--抢票任务配置文件<br>
 config/conf.yaml--系统配置文件<br>
 utils/sendEmail.py--邮件发送模块<br>
@@ -81,7 +81,7 @@ main.py--主程序<br>
 server.py--邮件代发服务端程序<br>
 client.py--邮件代发客户端程序(ps: 有些网络下邮件发送失败，需要代发)<br>
 captcha/model.h5--文字识别数据文件<br>
-captcha/12306.image.model.h5--图片识别数据文件，数据文件未上传至仓库，请自行[下载](http://www.itsmartkit.com/captcha/model.rar)<br>
+captcha/12306.image.model.h5--图片识别数据文件，数据文件未上传至仓库，请自行[下载](http://www.itsmartkit.com/captcha/model.zip)<br>
 #### 重点关注
 运行文件：**server.py、main.py**<br>
 重点配置：**conf.yaml、booking.yaml**<br>
