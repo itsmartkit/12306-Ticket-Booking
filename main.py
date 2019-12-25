@@ -1272,7 +1272,7 @@ def order(bkInfo):
                     println('日期【{}】的起售时间未到，本次查询结束，下一查询计划自动延长[{}]秒~'.format(date, delay))
                     time.sleep(delay)
                     continue
-                if is_exec_query[0] and is_exec_query[1] >= cfg.get('sell_mode_exp_time', 30):
+                if bkInfo.is_sell_mode and is_exec_query[0] and is_exec_query[1] >= cfg.get('sell_mode_exp_time', 30):
                     println('车票已发售[{}]分钟，系统自动切入普通抢票模式，本次余票查询延长[{}]秒~'.format(is_exec_query[1], delay))
                     time.sleep(delay)
                 # 防止多次多线程并发封禁ip
@@ -1810,14 +1810,14 @@ def task():
             thread_list.update({info_key : False})
 
 def cdn_req(cdn):
-    for i in range(len(cdn) - 1):
+    for i in range(len(cdn)):
         http = HTTPClient(0, 0)
         urls = {
             'req_url': '/otn/login/init',
             'req_type': 'get',
             'Referer': 'https://kyfw.12306.cn/otn/index/init',
             'Host': 'kyfw.12306.cn',
-            're_try': 1,
+            're_try': 0,
             're_time': 0.1,
             's_time': 0.1,
             'is_logger': False,
@@ -1827,7 +1827,9 @@ def cdn_req(cdn):
         http._cdn = cdn[i].replace("\n", "")
         start_time = datetime.datetime.now()
         rep = http.send(urls)
-        if rep and "message" not in rep and (datetime.datetime.now() - start_time).microseconds / 1000 < 500:
+        if type(rep) != str:
+            continue
+        if (datetime.datetime.now() - start_time).microseconds / 1000 < 500:
             # 如果有重复的cdn，则放弃加入
             if cdn[i].replace("\n", "") not in cdn_list:
                 cdn_list.append(cdn[i].replace("\n", ""))
@@ -2040,7 +2042,7 @@ def check_sell_time(is_sell_mode, book_date, sell_time):
     if book_date_stamp <= sell_date_stamp:
         flag = True
     if is_sell_mode is False:
-        return flag
+        return flag, over_time
     # 起售时间
     if type(sell_time) is str and len(sell_time) == 5:
         now = datetime.datetime.now()
