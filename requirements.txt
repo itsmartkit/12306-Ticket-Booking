@@ -9,7 +9,7 @@ wrapcache==1.0.8
 mutagen==1.42.0
 keras>=2.2.4
 tensorflow
-matplotlib>=3.0.2
+matplotlib
 numpy>=1.14.6
 scipy>=1.1.0
 fake_useragent
