@@ -155,6 +155,7 @@ class Leftquery(object):
             "is_logger": False,
             "is_json": True,
             "is_full_url": True,
+            're_time': 0.1,
         }
         html = httpClient.send(_urls)
         return html
@@ -628,6 +629,9 @@ class Order(object):
             'tour_flag': 'dc',
             'randCode': '',
             'whatsSelect': '1',
+            'sessionId': '',
+            'sig': '',
+            'scene': 'nc_login',
             '_json_att': '',
             'REPEAT_SUBMIT_TOKEN': token
         }
