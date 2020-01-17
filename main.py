@@ -695,11 +695,9 @@ class Order(object):
     def confirm(self, passengerTicketStr, oldpassengerStr, key_check_isChange, leftTicket, purpose_codes,
                 train_location, choose_seats, token):
         '''最终确认订单'''
-        num = 0
         chooseSeatsStr = ''
         for code in choose_seats:
-            num += 1
-            chooseSeatsStr = chooseSeatsStr + str(num) + code
+            chooseSeatsStr = chooseSeatsStr + '1' + code
         form = {
             'passengerTicketStr': passengerTicketStr,
             'oldPassengerStr': oldpassengerStr,
